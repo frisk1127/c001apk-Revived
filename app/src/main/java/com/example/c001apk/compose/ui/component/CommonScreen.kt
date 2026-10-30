@@ -14,6 +14,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import androidx.core.view.isVisible
 import com.example.c001apk.compose.ui.base.BaseViewModel
@@ -52,6 +54,8 @@ fun CommonScreen(
     onShowGlobalProductComparison: (() -> Unit)? = null,
     onToggleProductEntityComparison: ((HomeFeedResponse.Entities) -> Unit)? = null,
     lazyListState: LazyListState = rememberLazyListState(),
+    beforeRefreshScrollConnection: NestedScrollConnection? = null,
+    onPullProgress: ((Float) -> Unit)? = null,
 ) {
 
     val view = LocalView.current
@@ -82,11 +86,13 @@ fun CommonScreen(
         indicatorTopInset = if (needTopPadding && blur) paddingValues.calculateTopPadding() else 0.dp,
         isRefreshing = viewModel.isRefreshing,
         onRefresh = viewModel::refresh,
+        onPullProgress = onPullProgress,
 
     ) {
         LazyColumn(
             modifier = Modifier
-                .fillMaxSize(),
+                .fillMaxSize()
+                .then(beforeRefreshScrollConnection?.let { Modifier.nestedScroll(it) } ?: Modifier),
             contentPadding = PaddingValues(
                 top = 10.dp + if (needTopPadding && blur) paddingValues.calculateTopPadding() else 0.dp,
                 bottom = 10.dp + maxOf(paddingValues.calculateBottomPadding(), navigationPadding)

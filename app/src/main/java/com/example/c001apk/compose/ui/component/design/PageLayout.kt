@@ -62,6 +62,7 @@ fun RefreshContainer(
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
     indicatorTopInset: Dp = 0.dp,
+    onPullProgress: ((Float) -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val currentContent by rememberUpdatedState(content)
@@ -72,6 +73,7 @@ fun RefreshContainer(
         top.yukonga.miuix.kmp.basic.PullToRefresh(
             isRefreshing = isRefreshing, onRefresh = onRefresh, modifier = modifier,
             pullToRefreshState = state, contentPadding = PaddingValues(top = headerInset),
+            onPullProgress = onPullProgress,
             color = MiuixTheme.colorScheme.primary,
             refreshTexts = listOf("下拉刷新", "松开刷新", "正在刷新", "刷新完成"),
             refreshTextStyle = MiuixTheme.textStyles.footnote1.copy(color = MiuixTheme.colorScheme.onSurfaceVariantSummary),

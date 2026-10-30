@@ -36,6 +36,7 @@ import com.example.c001apk.compose.ui.component.design.Text
 import com.example.c001apk.compose.ui.component.design.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +47,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -107,8 +111,19 @@ fun AppScreen(
     )
     val scope = rememberCoroutineScope()
     var refreshState by remember { mutableStateOf(false) }
+    var isPulling by remember { mutableStateOf(false) }
+    LaunchedEffect(pagerState.currentPage) { isPulling = false }
 
     val state = rememberCollapsingToolbarScaffoldState()
+    val expandBeforeRefresh = remember(state) {
+        object : NestedScrollConnection {
+            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                // 列表到顶后，先把应用栏展开，剩余拖动距离再交给刷新层。
+                return if (available.y > 0f) Offset(0f, state.toolbarState.dispatchRawDelta(available.y))
+                    else Offset.Zero
+            }
+        }
+    }
 
     val windowInsets = WindowInsets.systemBars
     var isScrollingUp by remember { mutableStateOf(false) }
@@ -116,6 +131,7 @@ fun AppScreen(
     CollapsingToolbarScaffold(
         state = state,
         scrollStrategy = ScrollStrategy.ExitUntilCollapsed,
+        enabled = !isPulling,
         modifier = Modifier.fillMaxSize(),
         toolbar = {
             TopAppBar(
@@ -279,6 +295,10 @@ fun AppScreen(
                                 onOpenLink = onOpenLink,
                                 onCopyText = onCopyText,
                                 onReport = onReport,
+                                beforeRefreshScrollConnection = expandBeforeRefresh,
+                                onPullProgress = { progress ->
+                                    if (pagerState.currentPage == index) isPulling = progress > 0f
+                                },
                                 isScrollingUp = {
                                     isScrollingUp = it
                                 }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.c001apk.compose.ui.component.CommonScreen
 import com.example.c001apk.compose.util.ReportType
@@ -28,6 +29,8 @@ fun AppContentScreen(
     onCopyText: (String?) -> Unit,
     onReport: (String, ReportType) -> Unit,
     isScrollingUp: ((Boolean) -> Unit)? = null,
+    beforeRefreshScrollConnection: NestedScrollConnection? = null,
+    onPullProgress: ((Float) -> Unit)? = null,
 ) {
 
     val viewModel =
@@ -39,7 +42,7 @@ fun AppContentScreen(
         }
 
     val windowInsets =
-        WindowInsets.navigationBars.only(WindowInsetsSides.Start + WindowInsetsSides.Bottom)
+        WindowInsets.navigationBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)
 
     CommonScreen(
         viewModel = viewModel,
@@ -52,6 +55,8 @@ fun AppContentScreen(
         onCopyText = onCopyText,
         onReport = onReport,
         isScrollingUp = isScrollingUp,
+        beforeRefreshScrollConnection = beforeRefreshScrollConnection,
+        onPullProgress = onPullProgress,
     )
 
     val context = LocalContext.current
