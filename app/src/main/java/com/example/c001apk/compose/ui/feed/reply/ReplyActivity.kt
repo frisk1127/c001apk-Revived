@@ -242,6 +242,18 @@ class ReplyActivity : AppCompatActivity(),
         binding.main.isFocusable = false
         binding.main.isFocusableInTouchMode = false
         baseRootPaddingBottom = binding.main.paddingBottom
+        if (binding.bottomLayout != null) {
+            binding.main.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> updateLandscapePanelSize() }
+            binding.textInputLayout.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+                val counter = binding.textInputLayout.findViewById<View>(com.google.android.material.R.id.textinput_counter)
+                val counterHeight = (counter?.parent as? View)?.height ?: 0
+                val editorHeight = binding.textInputLayout.height - counterHeight -
+                    binding.textInputLayout.paddingTop - binding.textInputLayout.paddingBottom
+                if (editorHeight > 0 && binding.editText.layoutParams.height != editorHeight) {
+                    binding.editText.layoutParams = binding.editText.layoutParams.apply { height = editorHeight }
+                }
+            }
+        }
 
         ViewCompat.setWindowInsetsAnimationCallback(binding.main, object : WindowInsetsAnimationCompat.Callback(DISPATCH_MODE_STOP) {
             override fun onPrepare(animation: WindowInsetsAnimationCompat) {
@@ -322,7 +334,7 @@ class ReplyActivity : AppCompatActivity(),
         ViewCompat.setOnApplyWindowInsetsListener(binding.main) { _, insets ->
             val imeInset = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
             val navInset = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
-            val sysInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
+            val safeInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
             val isImeVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
             val useImeInset = isImeVisible || imeInset > 0
             if (isImeVisible) {
@@ -358,9 +370,12 @@ class ReplyActivity : AppCompatActivity(),
                 }
             }
             binding.main.updatePadding(
-                bottom = baseRootPaddingBottom + navInset,
-                top = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
+                left = safeInsets.left,
+                right = safeInsets.right,
+                bottom = baseRootPaddingBottom + safeInsets.bottom,
+                top = safeInsets.top
             )
+            updateLandscapePanelSize()
             if (!isImeVisible && !imeAnimating && pendingExternalLaunch != null) {
                 isWaitingForImeHide = false
                 runPendingExternalLaunch()
@@ -465,7 +480,7 @@ class ReplyActivity : AppCompatActivity(),
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) requestInitialKeyboard()
-        if (hasFocus && imeHideSuppressed) {
+        if (hasFocus && imeHideSuppressed && !isExiting) {
             // 窗口失焦期间 IME 动画回调可能丢失，恢复时重置状态避免输入框位置冻结
             imeHideSuppressed = false
             ViewCompat.requestApplyInsets(binding.main)
@@ -568,19 +583,19 @@ class ReplyActivity : AppCompatActivity(),
         binding.replyDragArea.setOnTouchListener { _, event ->
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
-                    binding.main.animate().cancel()
+                    replyMotionView().animate().cancel()
                     dragStartY = event.rawY
                     dragStartTime = event.eventTime
                 }
-                MotionEvent.ACTION_MOVE -> binding.main.translationY = (event.rawY - dragStartY).coerceAtLeast(0f)
+                MotionEvent.ACTION_MOVE -> replyMotionView().translationY = (event.rawY - dragStartY).coerceAtLeast(0f)
                 MotionEvent.ACTION_UP -> {
                     val distance = (event.rawY - dragStartY).coerceAtLeast(0f)
                     val elapsed = (event.eventTime - dragStartTime).coerceAtLeast(1L)
                     val density = resources.displayMetrics.density
                     if (distance > 72 * density || (distance > 24 * density && distance / elapsed > density)) finish()
-                    else binding.main.animate().translationY(0f).setDuration(200L).start()
+                    else replyMotionView().animate().translationY(0f).setDuration(200L).start()
                 }
-                MotionEvent.ACTION_CANCEL -> binding.main.animate().translationY(0f).setDuration(200L).start()
+                MotionEvent.ACTION_CANCEL -> replyMotionView().animate().translationY(0f).setDuration(200L).start()
             }
             true
         }
@@ -595,7 +610,9 @@ class ReplyActivity : AppCompatActivity(),
         nativeIcons.forEach { (view, icon) ->
             val target = if (currentUiStyle == UiStyle.MIUIX) icon else originalIcons[view]
             if (view.drawable !== target) view.setImageDrawable(target)
-            view.minimumHeight = if (currentUiStyle == UiStyle.MIUIX) 48.dp else 0
+            view.minimumHeight = if (currentUiStyle == UiStyle.MIUIX) {
+                if (binding.bottomLayout != null) 40.dp else 48.dp
+            } else 0
             view.scaleType = if (currentUiStyle == UiStyle.MIUIX) android.widget.ImageView.ScaleType.CENTER_INSIDE
                 else originalIconScales[view] ?: android.widget.ImageView.ScaleType.FIT_CENTER
         }
@@ -677,11 +694,12 @@ class ReplyActivity : AppCompatActivity(),
                 binding.main.doOnPreDraw {
                     if (!isFinishing && !isDestroyed) {
                         hasStartedEntrance = true
-                        binding.main.translationY = (binding.bottomLayout ?: binding.inputLayout).height.toFloat()
+                        val sheet = replyMotionView()
+                        sheet.translationY = (binding.bottomLayout ?: binding.inputLayout).height.toFloat()
                         binding.main.alpha = 1f
-                        binding.main.animate()
+                        sheet.animate()
                             .translationY(0f)
-                            .setDuration(300L)
+                            .setDuration(if (binding.bottomLayout != null) 220L else 300L)
                             .setInterpolator(android.view.animation.PathInterpolator(0.2f, 0f, 0f, 1f))
                             .start()
                         requestInitialKeyboard()
@@ -1015,6 +1033,7 @@ class ReplyActivity : AppCompatActivity(),
         super.onDestroy()
         cancelEmojiPanelEntranceAnimation()
         binding.main.animate().cancel()
+        binding.bottomLayout?.animate()?.cancel()
         binding.inputLayout.animate().cancel()
         binding.emojiLayout.animate().cancel()
         closeDialog()
@@ -1462,9 +1481,21 @@ class ReplyActivity : AppCompatActivity(),
         return false
     }
 
+    private fun replyMotionView(): View = binding.bottomLayout ?: binding.main
+
+    private fun updateLandscapePanelSize() {
+        val panel = binding.bottomLayout ?: return
+        val available = binding.main.height - binding.main.paddingTop - binding.main.paddingBottom - 8.dp
+        if (available > 0) {
+            val height = minOf(312.dp, available)
+            if (panel.layoutParams.height != height) {
+                panel.layoutParams = panel.layoutParams.apply { this.height = height }
+            }
+        }
+    }
+
     private fun updateReplyPanelTranslation(translation: Float) {
         // In the landscape layout, the editor stays beside the split IME instead of above it.
-        binding.bottomLayout?.translationY = 0f
         if (binding.bottomLayout == null) {
             val alignedTranslation = translation.roundToInt().toFloat()
             val seamOverlap = if (isEmojiPanelVisible && alignedTranslation != 0f) 1f else 0f
@@ -1492,17 +1523,18 @@ class ReplyActivity : AppCompatActivity(),
             private var progress = 0f
             override fun handleOnBackStarted(backEvent: BackEventCompat) {
                 progress = 0f
-                binding.main.animate().cancel()
+                replyMotionView().animate().cancel()
             }
             override fun handleOnBackProgressed(backEvent: BackEventCompat) {
                 if (isExiting || currentUiStyle != UiStyle.MIUIX) return
                 progress = backEvent.progress.coerceIn(0f, 1f)
-                binding.main.translationY = binding.main.height * progress
+                val sheet = replyMotionView()
+                sheet.translationY = sheet.height * progress
                 window.setDimAmount(initialDim * (1f - progress))
             }
             override fun handleOnBackCancelled() {
                 progress = 0f
-                binding.main.animate().translationY(0f).setDuration(180L).start()
+                replyMotionView().animate().translationY(0f).setDuration(180L).start()
                 window.setDimAmount(initialDim)
             }
             override fun handleOnBackPressed() {
@@ -1512,7 +1544,8 @@ class ReplyActivity : AppCompatActivity(),
                     isExiting = true
                     imeHideSuppressed = true
                     exitHandler.postDelayed(finishFallback, 800L)
-                    binding.main.animate().translationY(binding.main.height.toFloat())
+                    val sheet = replyMotionView()
+                    sheet.animate().translationY((sheet.height + binding.main.paddingBottom).toFloat())
                         .setDuration((200L * (1f - progress)).toLong().coerceAtLeast(60L))
                         .withEndAction { finishAfterExitAnimation() }.start()
                 }
@@ -1525,9 +1558,16 @@ class ReplyActivity : AppCompatActivity(),
     override fun finish() {
         if (isExiting) return
         isExiting = true
+        imeRetryHandler.removeCallbacks(imeRetryRunnable)
+        pendingShowKeyboard = false
         // IME 回调可能取消退出动画，仍需保证 Activity 能正常结束。
         exitHandler.postDelayed(finishFallback, 800L)
         imeHideSuppressed = true
+        if (binding.bottomLayout != null) {
+            WindowCompat.getInsetsController(window, binding.editText).hide(WindowInsetsCompat.Type.ime())
+            animateExitSlideOut(includeEmojiPanel = true)
+            return
+        }
         if (isEmojiPanelVisible) {
             cancelEmojiPanelEntranceAnimation()
             binding.main.overlay.remove(imeScrimDrawable)
@@ -1550,12 +1590,15 @@ class ReplyActivity : AppCompatActivity(),
     private fun animateExitSlideOut(includeEmojiPanel: Boolean = false) {
         binding.main.overlay.remove(imeScrimDrawable)
         binding.main.overlay.remove(externalLaunchScrimDrawable)
-        val animatedView = if (includeEmojiPanel) binding.main else binding.inputLayout
-        val height = if (includeEmojiPanel) {
+        val animatedView = binding.bottomLayout ?: if (includeEmojiPanel) binding.main else binding.inputLayout
+        val height = if (binding.bottomLayout != null) {
+            animatedView.height.toFloat() + binding.main.paddingBottom
+        } else if (includeEmojiPanel) {
             binding.main.height.toFloat()
         } else {
             binding.inputLayout.height.toFloat()
         }
+        animatedView.animate().cancel()
         animatedView.animate()
             .translationY(height)
             .setDuration(200L)

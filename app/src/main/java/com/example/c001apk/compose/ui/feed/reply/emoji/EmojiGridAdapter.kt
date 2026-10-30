@@ -64,7 +64,8 @@ class EmojiGridAdapter(
             }
             view
         } else View(parent.context).apply {
-            layoutParams = ViewGroup.LayoutParams(48.dp, 48.dp)
+            val cellHeight = if (resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) 40.dp else 48.dp
+            layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, cellHeight)
             isEnabled = false
         }
     }
