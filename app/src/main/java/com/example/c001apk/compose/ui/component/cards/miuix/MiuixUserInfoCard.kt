@@ -2,8 +2,10 @@ package com.example.c001apk.compose.ui.component.cards.miuix
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -14,6 +16,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.c001apk.compose.logic.model.HomeFeedResponse
 import com.example.c001apk.compose.ui.component.ImageView
+import com.example.c001apk.compose.ui.component.design.contentPress
+import com.example.c001apk.compose.ui.component.rememberHapticClick
 import com.example.c001apk.compose.ui.ffflist.FFFListType
 import com.example.c001apk.compose.util.CookieUtil
 import com.example.c001apk.compose.util.DateUtils.fromToday
@@ -26,6 +30,8 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 fun MiuixUserInfoCard(data: HomeFeedResponse.Data, onFollow: (String, Int) -> Unit,
     onPMUser: (String, String) -> Unit, onViewFFFList: (String, String) -> Unit) {
     val context = LocalContext.current
+    val coverButtonColors = ButtonDefaults.textButtonColors(
+        color = Color.Black.copy(alpha = .24f), textColor = Color.White)
     Column(Modifier.fillMaxWidth().testTag("miuix-user-profile")) {
         Box(Modifier.fillMaxWidth().heightIn(min = 230.dp).background(MiuixTheme.colorScheme.surfaceContainer)) {
             ImageView(url = data.cover.orEmpty(), modifier = Modifier.matchParentSize())
@@ -37,22 +43,32 @@ fun MiuixUserInfoCard(data: HomeFeedResponse.Data, onFollow: (String, Int) -> Un
                     ImageView(url = data.userAvatar.orEmpty(), isRound = true, modifier = Modifier.size(72.dp))
                     FlowRow(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
                         verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TextButton(text = "私信", onClick = {
+                        TextButton(text = "私信", onClick = rememberHapticClick {
                             if (CookieUtil.isLogin) onPMUser(data.uid.orEmpty(), data.username.orEmpty())
                             else context.makeToast("请先登录")
-                        })
+                        }, modifier = Modifier.contentPress(pressedScale = .96f),
+                            insideMargin = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                            textStyle = MiuixTheme.textStyles.footnote1, colors = coverButtonColors)
                         TextButton(text = if (data.isFollow == 1) "取消关注" else "关注",
-                            colors = if (data.isFollow == 1) ButtonDefaults.textButtonColors() else ButtonDefaults.textButtonColorsPrimary(),
-                            onClick = { onFollow(data.uid.orEmpty(), data.isFollow ?: 0) })
+                            modifier = Modifier.contentPress(pressedScale = .96f),
+                            insideMargin = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                            textStyle = MiuixTheme.textStyles.footnote1,
+                            colors = if (data.isFollow == 1) coverButtonColors else ButtonDefaults.textButtonColorsPrimary(),
+                            onClick = rememberHapticClick { onFollow(data.uid.orEmpty(), data.isFollow ?: 0) })
                     }
                 }
+                Text(data.username.orEmpty(), Modifier.clickable(
+                    interactionSource = remember { MutableInteractionSource() }, indication = null,
+                    onClick = rememberHapticClick { context.copyText(data.username.orEmpty()) }),
+                    style = MiuixTheme.textStyles.title3, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(data.username.orEmpty(), Modifier.weight(1f).clickable { context.copyText(data.username.orEmpty()) },
-                        style = MiuixTheme.textStyles.title3, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text("UID: ${data.uid}", Modifier.weight(1f).clickable(
+                        interactionSource = remember { MutableInteractionSource() }, indication = null,
+                        onClick = rememberHapticClick { context.copyText(data.uid.orEmpty()) }),
+                        style = MiuixTheme.textStyles.footnote1, color = Color.White.copy(alpha = .85f),
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text("Lv.${data.level}", style = MiuixTheme.textStyles.footnote1, color = Color.White.copy(alpha = .85f))
                 }
-                Text("UID: ${data.uid}", Modifier.clickable { context.copyText(data.uid.orEmpty()) },
-                    style = MiuixTheme.textStyles.footnote1, color = Color.White.copy(alpha = .85f))
                 if (!data.bio.isNullOrEmpty()) Text(data.bio, style = MiuixTheme.textStyles.body1, color = Color.White)
                 Text("${fromToday(data.logintime ?: 0)}活跃", style = MiuixTheme.textStyles.footnote1,
                     color = Color.White.copy(alpha = .85f))

@@ -1,5 +1,6 @@
 package com.example.c001apk.compose.ui.main
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
@@ -86,7 +87,10 @@ fun AppNavHost(
             movableContentOf {
                 entry.LocalOwnersProvider(stateHolder) {
                     val isTop = latestEntryId.value == entry.id
-                    Box(Modifier.fillMaxSize().then(if (isTop) Modifier else Modifier.clearAndSetSemantics {})) {
+                    val pageBackground = if (LocalUiStyle.current == UiStyle.MIUIX)
+                        Modifier.background(MiuixTheme.colorScheme.surface) else Modifier
+                    Box(Modifier.fillMaxSize().then(pageBackground)
+                        .then(if (isTop) Modifier else Modifier.clearAndSetSemantics {})) {
                         latestDefinitions.value.pages.first { it.route == entry.destination.route }.content(entry)
                     }
                 }

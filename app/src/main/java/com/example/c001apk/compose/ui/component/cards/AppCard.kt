@@ -48,6 +48,10 @@ fun AppCard(
         com.example.c001apk.compose.ui.component.cards.miuix.MiuixTopicCard(modifier, data, onOpenLink)
         return
     }
+    if (com.example.c001apk.compose.ui.theme.isMiuix() && appCardType == AppCardType.USER) {
+        com.example.c001apk.compose.ui.component.cards.miuix.MiuixUserCard(modifier, data, onOpenLink, onFollowUser)
+        return
+    }
 
     ConstraintLayout(
         modifier = modifier
