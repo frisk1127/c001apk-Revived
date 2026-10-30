@@ -34,6 +34,9 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.c001apk.compose.logic.model.UpdateCheckItem
 import com.example.c001apk.compose.logic.providable.LocalUserPreferences
+import com.example.c001apk.compose.ui.component.design.LocalHomePadding
+import com.example.c001apk.compose.ui.component.design.LocalNavigationPadding
+import com.example.c001apk.compose.ui.component.rememberHapticClick
 import com.example.c001apk.compose.util.isScrollingUp
 import com.example.c001apk.compose.util.longVersionCodeCompat
 
@@ -54,6 +57,8 @@ fun AppListScreen(
     val context = LocalContext.current
     val view = LocalView.current
     val lazyListState = rememberLazyListState()
+    val homePadding = LocalHomePadding.current
+    val bottomInset = maxOf(homePadding.calculateBottomPadding(), LocalNavigationPadding.current)
 
     LaunchedEffect(refreshState) {
         if (refreshState) {
@@ -66,13 +71,13 @@ fun AppListScreen(
     }
 
     RefreshContainer(
-        indicatorTopInset = com.example.c001apk.compose.ui.component.design.LocalHomePadding.current.calculateTopPadding(),
+        indicatorTopInset = homePadding.calculateTopPadding(),
         isRefreshing = viewModel.isRefreshing,
         onRefresh = viewModel::refresh,
 
     ) {
         LazyColumn(
-            contentPadding = com.example.c001apk.compose.ui.component.design.LocalHomePadding.current,
+            contentPadding = homePadding,
             modifier = Modifier.fillMaxSize(),
             state = lazyListState,
         ) {
@@ -126,12 +131,12 @@ fun AppListScreen(
                 exit = slideOutVertically { it * 2 },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(20.dp)
+                    .padding(end = 20.dp, bottom = bottomInset + 20.dp)
             ) {
                 FloatingActionButton(
-                    onClick = { onCheckUpdate(viewModel.dataList) },
+                    onClick = rememberHapticClick { onCheckUpdate(viewModel.dataList) },
                 ) {
-                    Icon(imageVector = Icons.Default.Update, contentDescription = null)
+                    Icon(imageVector = Icons.Default.Update, contentDescription = "检查应用更新")
                 }
             }
         }
