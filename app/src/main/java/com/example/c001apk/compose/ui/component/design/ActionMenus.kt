@@ -21,10 +21,30 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.More
 import top.yukonga.miuix.kmp.menu.OverlayIconDropdownMenu
+import top.yukonga.miuix.kmp.menu.OverlayIconCascadingDropdownMenu
 import top.yukonga.miuix.kmp.popup.OverlayDropdownPopup
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 data class MenuAction(val title: String, val icon: ImageVector? = null, val onClick: () -> Unit)
+
+@Composable
+fun MiuixCascadingMenuButton(
+    entry: DropdownEntry,
+    modifier: Modifier = Modifier,
+    contentDescription: String = "更多选项",
+) {
+    var expanded by remember { mutableStateOf(false) }
+    GlobalPopupBlur(expanded)
+    ConfiguredMenuHaptics {
+        OverlayIconCascadingDropdownMenu(
+            entry = entry, modifier = modifier.contentPress(pressedScale = .92f),
+            minWidth = 48.dp, minHeight = 48.dp, onExpandedChange = { expanded = it },
+        ) {
+            Icon(MiuixIcons.Medium.More, contentDescription,
+                tint = MiuixTheme.colorScheme.onSurfaceVariantActions)
+        }
+    }
+}
 
 @Composable
 fun MiuixActionMenuButton(

@@ -54,6 +54,10 @@ import com.example.c001apk.compose.util.decode
 import com.example.c001apk.compose.util.noRippleClickable
 import kotlinx.coroutines.launch
 import com.example.c001apk.compose.ui.component.MoreMenuButton
+import com.example.c001apk.compose.ui.component.design.MiuixCascadingMenuButton
+import com.example.c001apk.compose.ui.theme.isMiuix
+import top.yukonga.miuix.kmp.basic.DropdownEntry
+import top.yukonga.miuix.kmp.basic.DropdownItem
 
 /**
  * Created by bggRGjQaUbCoE on 2024/6/9
@@ -65,10 +69,6 @@ enum class SearchType {
 
 enum class SearchFeedType {
     ALL, FEED, ARTICLE, COOLPIC, COMMENT, RATING, ANSWER, QUESTION, VOTE
-}
-
-enum class SearchOrderType {
-    DATELINE, HOT, REPLY
 }
 
 private fun searchTypeTitle(type: SearchType): String {
@@ -93,14 +93,6 @@ private fun searchFeedTitle(type: SearchFeedType): String {
         SearchFeedType.ANSWER -> "回答"
         SearchFeedType.QUESTION -> "问题"
         SearchFeedType.VOTE -> "投票"
-    }
-}
-
-private fun searchOrderTitle(type: SearchOrderType): String {
-    return when (type) {
-        SearchOrderType.DATELINE -> "时间"
-        SearchOrderType.HOT -> "热度"
-        SearchOrderType.REPLY -> "回复"
     }
 }
 
@@ -139,7 +131,21 @@ fun SearchResultScreen(
     var typeMenuExpanded by remember { mutableStateOf(false) }
     var orderMenuExpanded by remember { mutableStateOf(false) }
     var feedType by rememberSaveable { mutableStateOf(SearchFeedType.ALL) }
-    var orderType by rememberSaveable { mutableStateOf(SearchOrderType.DATELINE) }
+    var orderType by rememberSaveable { mutableStateOf(SearchOrderType.COMPREHENSIVE) }
+    val filterEntry = remember(feedType, orderType) {
+        DropdownEntry(listOf(
+            DropdownItem(text = "类型", summary = searchFeedTitle(feedType),
+                children = SearchFeedType.entries.map { type ->
+                    DropdownItem(text = searchFeedTitle(type), selected = feedType == type,
+                        onClick = { feedType = type })
+                }),
+            DropdownItem(text = "排序", summary = orderType.title,
+                children = SearchOrderType.entries.map { order ->
+                    DropdownItem(text = order.title, selected = orderType == order,
+                        onClick = { orderType = order })
+                }),
+        ))
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -179,7 +185,9 @@ fun SearchResultScreen(
                         enter = fadeIn(),
                         exit = fadeOut()
                     ) {
-                        Box {
+                        if (isMiuix()) {
+                            MiuixCascadingMenuButton(filterEntry, contentDescription = "搜索类型与排序")
+                        } else Box {
                             MoreMenuButton { dropdownMenuExpanded = true }
                             DropdownMenu(
                                 expanded = dropdownMenuExpanded,
@@ -257,7 +265,7 @@ fun SearchResultScreen(
                                             }
                                         )
                                         Text(
-                                            text = searchOrderTitle(order),
+                                            text = order.title,
                                             style = MaterialTheme.typography.bodyMedium,
                                             modifier = Modifier
                                                 .fillMaxWidth()

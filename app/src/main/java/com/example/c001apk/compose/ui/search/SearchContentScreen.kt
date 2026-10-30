@@ -2,7 +2,7 @@ package com.example.c001apk.compose.ui.search
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.isVisible
@@ -38,8 +38,11 @@ fun SearchContentScreen(
         updateInitPage()
     }
 
+    val selectedFeedType = if (searchType == SearchType.FEED) feedType else SearchFeedType.ALL
+    val selectedOrder = if (searchType == SearchType.FEED) orderType else SearchOrderType.DATELINE
+    val requestKey = listOf(keyword, searchType.name, pageType, pageParam, selectedFeedType.name, selectedOrder.name).toString()
     val viewModel =
-        hiltViewModel<SearchContentViewModel, SearchContentViewModel.ViewModelFactory>(key = keyword + searchType.name) { factory ->
+        hiltViewModel<SearchContentViewModel, SearchContentViewModel.ViewModelFactory>(key = requestKey) { factory ->
             factory.create(
                 type = when (searchType) {
                     SearchType.FEED -> "feed"
@@ -49,53 +52,24 @@ fun SearchContentScreen(
                     SearchType.USER -> "user"
                     SearchType.TOPIC -> "feedTopic"
                 },
-                keyword = keyword, pageType = pageType, pageParam = pageParam
+                keyword = keyword, pageType = pageType, pageParam = pageParam,
+                searchFeedType = selectedFeedType, sortType = selectedOrder,
             )
         }
 
-    if (searchType == SearchType.FEED) {
-        LaunchedEffect(feedType) {
-            if (feedType != viewModel.searchFeedType) {
-                viewModel.searchFeedType = feedType
-                viewModel.feedType = when (feedType) {
-                    SearchFeedType.ALL -> "all"
-                    SearchFeedType.FEED -> "feed"
-                    SearchFeedType.ARTICLE -> "feedArticle"
-                    SearchFeedType.COOLPIC -> "picture"
-                    SearchFeedType.COMMENT -> "comment"
-                    SearchFeedType.RATING -> "rating"
-                    SearchFeedType.ANSWER -> "answer"
-                    SearchFeedType.QUESTION -> "question"
-                    SearchFeedType.VOTE -> "vote"
-                }
-                viewModel.refresh()
-            }
-        }
-
-        LaunchedEffect(orderType) {
-            if (orderType != viewModel.sortType) {
-                viewModel.sortType = orderType
-                viewModel.sort = when (orderType) {
-                    SearchOrderType.DATELINE -> "default"
-                    SearchOrderType.HOT -> "hot"
-                    SearchOrderType.REPLY -> "reply"
-                }
-                viewModel.refresh()
-            }
-        }
+    key(requestKey) {
+        CommonScreen(
+            viewModel = viewModel,
+            refreshState = refreshState,
+            resetRefreshState = resetRefreshState,
+            paddingValues = paddingValues,
+            onViewUser = onViewUser,
+            onViewFeed = onViewFeed,
+            onOpenLink = onOpenLink,
+            onCopyText = onCopyText,
+            onReport = onReport,
+        )
     }
-
-    CommonScreen(
-        viewModel = viewModel,
-        refreshState = refreshState,
-        resetRefreshState = resetRefreshState,
-        paddingValues = paddingValues,
-        onViewUser = onViewUser,
-        onViewFeed = onViewFeed,
-        onOpenLink = onOpenLink,
-        onCopyText = onCopyText,
-        onReport = onReport,
-    )
 
     val context = LocalContext.current
     viewModel.toastText?.let {
