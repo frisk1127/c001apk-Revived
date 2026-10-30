@@ -55,7 +55,7 @@ class AddCookiesInterceptor @Inject constructor(private val preferences: UserPre
                 )
             else addHeader("Cookie", SESSID)
         }
-        val response = chain.proceed(builder.build().withReplyApiCompatibility())
+        val response = chain.proceed(builder.build().withFeedApiCompatibility())
         val current = runBlocking { preferences.data.first() }
         if (session.sessionGeneration != current.sessionGeneration || session.xAppDevice != current.xAppDevice) {
             response.close()
