@@ -79,6 +79,8 @@ miuix 深色模式，点击图片可查看原图。
 
 使用 Kotlin 和 Jetpack Compose，`main` 为主线。版本号由 Git 提交记录生成，本地构建请保留完整 Git 历史。
 
+推送到 `main`、`dev`、`miuix` 或向这些分支提交 PR 时，CI 会自动构建 Debug APK，并运行应用与媒体模块的单元测试。构建产物和测试报告可在对应的 [Actions](https://github.com/frisk1127/c001apk-Revived/actions/workflows/ci.yml) 运行页面下载；纯文档改动跳过自动检查，也可手动触发。
+
 <details>
 <summary>本地构建</summary>
 
