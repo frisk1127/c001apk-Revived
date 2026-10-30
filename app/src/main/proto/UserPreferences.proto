@@ -56,6 +56,8 @@ message UserPreferences {
   int64 sessionGeneration = 50;
   int64 szlmLastAttempt = 51;
   int64 pendingDeviceIdLogin = 52;
+  optional bool autoCheckClientUpdate = 53;
+  int64 lastClientUpdateCheck = 54;
 }
 
 message SavedAccount {

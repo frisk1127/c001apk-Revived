@@ -34,6 +34,7 @@ import com.example.c001apk.compose.ui.component.BackButton
 import com.example.c001apk.compose.ui.component.LauncherIconImage
 import com.example.c001apk.compose.ui.component.settings.BasicListItem
 import com.example.c001apk.compose.util.openInBrowser
+import com.example.c001apk.compose.ui.update.AboutClientUpdates
 
 /**
  * Created by bggRGjQaUbCoE on 2024/6/2
@@ -95,6 +96,7 @@ fun AboutScreen(
             ) {
                 context.openInBrowser(URL_SOURCE_CODE)
             }
+            AboutClientUpdates()
             BasicListItem(
                 leadingImageVector = Icons.Outlined.ForkRight,
                 headlineText = "本项目地址",

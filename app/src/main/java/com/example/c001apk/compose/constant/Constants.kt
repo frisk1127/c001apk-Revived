@@ -42,6 +42,9 @@ object Constants {
     const val URL_LOGIN = "https://account.coolapk.com/auth/login?type=mobile"
     const val URL_SOURCE_CODE = "https://github.com/bggRGjQaUbCoE/c001apk-compose"
     const val URL_SOURCE_CODE_FORK = "https://github.com/frisk1127/c001apk-Revived"
+    const val URL_RELEASES = "$URL_SOURCE_CODE_FORK/releases"
+    const val URL_TELEGRAM_CHANNEL = "https://t.me/c001apk_revived"
+    const val GITHUB_LATEST_RELEASE_API = "https://api.github.com/repos/frisk1127/c001apk-Revived/releases/latest"
 
     val entityTypeList =
         listOf(

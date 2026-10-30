@@ -91,7 +91,8 @@ internal fun MiuixSettingsContent(
         PreferenceLink("机型参数", onClick = onParams)
     }
     PreferenceGroup("应用") {
-        SwitchListItem(prefs.checkUpdate, Icons.Outlined.SystemUpdate, "检查更新", onValueChanged = viewModel::setCheckUpdate)
+        SwitchListItem(prefs.checkUpdate, Icons.Outlined.SystemUpdate, "检查已安装应用更新", "检查酷安中的应用版本",
+            onValueChanged = viewModel::setCheckUpdate)
         PreferenceLink("清理缓存", cacheSize, onClick = onClearCache)
         PreferenceLink("关于", onClick = onAbout)
     }

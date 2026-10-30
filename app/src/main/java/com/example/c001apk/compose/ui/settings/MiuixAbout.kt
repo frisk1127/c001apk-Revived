@@ -41,6 +41,7 @@ import com.example.c001apk.compose.ui.component.BackButton
 import com.example.c001apk.compose.logic.providable.LocalUserPreferences
 import com.example.c001apk.compose.ui.component.design.isMiuixWindowBlurEnabled
 import com.example.c001apk.compose.util.openInBrowser
+import com.example.c001apk.compose.ui.update.AboutClientUpdates
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
@@ -91,6 +92,7 @@ internal fun MiuixAboutScreen(onBack: () -> Unit, onLicense: () -> Unit, scroll:
                         Modifier.textureBlur(backdrop = backdrop, shape = RoundedCornerShape(CardDefaults.CornerRadius),
                             blurRadius = 60f, colors = glassColors) else Modifier),
                         colors = CardDefaults.defaultColors(Color.White.copy(alpha = if (dark) .18f else .65f))) {
+                        AboutClientUpdates()
                         ProjectLinks()
                         ArrowPreference(title = "开源许可证", onClick = onLicense)
                         ArrowPreference(title = "反馈", summary = "报告问题或提出建议",

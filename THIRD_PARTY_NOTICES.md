@@ -1,5 +1,9 @@
 # Third-party notices
 
+GitHub release notes are rendered with [Markwon 4.6.2](https://github.com/noties/Markwon/tree/v4.6.2)
+(Dimitry Ivanov, Apache-2.0), including its GFM tables extension.
+The license is distributed in `app/src/main/assets/licenses/Markwon-Apache-2.0.txt`.
+
 The Niuniu emoji images (`niuniu_emotion_*.png`) and their Chinese names come
 from the Coolapk 16.5.0 Android client (2607151). The images are included unchanged
 for displaying and composing Coolapk messages. Emoji artwork belongs to Coolapk

@@ -191,6 +191,8 @@ dependencies {
     implementation(libs.miuix.preference)
     implementation(libs.miuix.icons)
     implementation(libs.miuix.nav)
+    implementation(libs.markwon.core)
+    implementation(libs.markwon.tables)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

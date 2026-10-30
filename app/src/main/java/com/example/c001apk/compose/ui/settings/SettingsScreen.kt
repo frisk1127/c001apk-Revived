@@ -354,7 +354,8 @@ fun SettingsScreen(
                 SwitchListItem(
                     value = prefs.checkUpdate,
                     leadingImageVector = Icons.Outlined.SystemUpdate,
-                    headlineText = "检查更新",
+                    headlineText = "检查已安装应用更新",
+                    supportingText = "检查酷安中的应用版本",
                 ) {
                     viewModel.setCheckUpdate(it)
                 }

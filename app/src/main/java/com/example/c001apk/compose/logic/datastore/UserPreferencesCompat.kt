@@ -66,6 +66,8 @@ data class UserPreferencesCompat(
     val sessionGeneration: Long = 0,
     val szlmLastAttempt: Long = 0,
     val pendingDeviceIdLogin: Long = 0,
+    val autoCheckClientUpdate: Boolean = true,
+    val lastClientUpdateCheck: Long = 0,
 ) {
     constructor(original: UserPreferences) : this(
         themeMode = original.themeMode,
@@ -120,6 +122,8 @@ data class UserPreferencesCompat(
         sessionGeneration = original.sessionGeneration,
         szlmLastAttempt = original.szlmLastAttempt,
         pendingDeviceIdLogin = original.pendingDeviceIdLogin,
+        autoCheckClientUpdate = if (original.hasAutoCheckClientUpdate()) original.autoCheckClientUpdate else true,
+        lastClientUpdateCheck = original.lastClientUpdateCheck,
     )
 
     @Composable
@@ -182,6 +186,8 @@ data class UserPreferencesCompat(
         .setSessionGeneration(sessionGeneration)
         .setSzlmLastAttempt(szlmLastAttempt)
         .setPendingDeviceIdLogin(pendingDeviceIdLogin)
+        .setAutoCheckClientUpdate(autoCheckClientUpdate)
+        .setLastClientUpdateCheck(lastClientUpdateCheck)
         .build()
 
     companion object {

@@ -27,6 +27,9 @@ import com.example.c001apk.compose.logic.repository.UserPreferencesRepository
 import com.example.c001apk.compose.ui.theme.C001apkComposeTheme
 import com.example.c001apk.compose.ui.component.SuppressWindowFocusHighlight
 import com.example.c001apk.compose.ui.search.SearchViewModel
+import com.example.c001apk.compose.ui.update.ClientUpdateViewModel
+import com.example.c001apk.compose.ui.update.ClientUpdateDialog
+import com.example.c001apk.compose.ui.update.LocalClientUpdates
 import com.example.c001apk.compose.util.CookieUtil.apiVersion
 import com.example.c001apk.compose.util.CookieUtil.customHaptics
 import com.example.c001apk.compose.util.CookieUtil.hapticFeedback
@@ -73,6 +76,7 @@ class MainActivity : ComponentActivity() {
     private val pendingDeepLinks = mutableStateListOf<String>()
     private val viewModel by viewModels<MainViewModel>()
     private val searchViewModel by viewModels<SearchViewModel>()
+    private val clientUpdates by viewModels<ClientUpdateViewModel>()
     private var stableStatusBarInset: Int? = null
     private var initialThemeReady = false
 
@@ -111,6 +115,7 @@ class MainActivity : ComponentActivity() {
             SuppressWindowFocusHighlight()
 
             val widthSizeClass = calculateWindowSizeClass(this).widthSizeClass
+            val lifecycleState by lifecycle.currentStateFlow.collectAsStateWithLifecycle()
 
             val userPreferences by userPreferencesRepository.data
                 .collectAsStateWithLifecycle(
@@ -128,7 +133,8 @@ class MainActivity : ComponentActivity() {
             val navigationOwner = androidx.compose.runtime.remember(preferences.sessionGeneration) { viewModel.navigationOwner(preferences.sessionGeneration) }
 
             CompositionLocalProvider(
-                LocalUserPreferences provides preferences
+                LocalUserPreferences provides preferences,
+                LocalClientUpdates provides clientUpdates,
             ) {
                 if (preferences.xAppDevice.isEmpty())
                     viewModel.regenerateParams()
@@ -195,6 +201,10 @@ class MainActivity : ComponentActivity() {
                         }
                         viewModel.loginDeviceIdNotice?.takeIf { it.generation == preferences.sessionGeneration }?.let {
                             LoginDeviceIdNotice(it, viewModel::dismissDeviceIdNotice)
+                        }
+                        if (lifecycleState == androidx.lifecycle.Lifecycle.State.RESUMED &&
+                            preferences.pendingDeviceIdLogin == 0L && viewModel.loginDeviceIdNotice == null) {
+                            ClientUpdateDialog(clientUpdates)
                         }
                     }
                 }

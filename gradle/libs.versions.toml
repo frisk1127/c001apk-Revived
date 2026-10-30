@@ -27,6 +27,7 @@ junitVersion = "1.2.1"
 kotlin = "2.4.20"
 ksp = "2.3.12"
 material = "1.12.0"
+markwon = "4.6.2"
 material3 = "1.4.0"
 miuix = "0.9.4"
 materialKolor = "5.0.1"
@@ -45,6 +46,8 @@ webkit = "1.11.0"
 material3WindowSizeClassAndroid = "1.4.0"
 
 [libraries]
+markwon-core = { module = "io.noties.markwon:core", version.ref = "markwon" }
+markwon-tables = { module = "io.noties.markwon:ext-tables", version.ref = "markwon" }
 androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
