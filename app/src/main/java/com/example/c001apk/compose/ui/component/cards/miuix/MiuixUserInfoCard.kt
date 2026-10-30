@@ -13,35 +13,49 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import com.example.c001apk.compose.logic.model.HomeFeedResponse
 import com.example.c001apk.compose.logic.providable.LocalUserPreferences
 import com.example.c001apk.compose.ui.component.ImageView
+import com.example.c001apk.compose.ui.component.CoilLoader
 import com.example.c001apk.compose.ui.component.design.contentPress
 import com.example.c001apk.compose.ui.component.rememberHapticClick
 import com.example.c001apk.compose.ui.ffflist.FFFListType
 import com.example.c001apk.compose.util.DateUtils.fromToday
 import com.example.c001apk.compose.util.copyText
 import com.example.c001apk.compose.util.makeToast
+import com.example.c001apk.compose.util.ImageShowUtil
 import top.yukonga.miuix.kmp.basic.*
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun MiuixUserInfoCard(data: HomeFeedResponse.Data, onFollow: (String, Int) -> Unit,
-    onPMUser: (String, String) -> Unit, onViewFFFList: (String, String) -> Unit) {
+    onPMUser: (String, String) -> Unit, onViewFFFList: (String, String) -> Unit,
+    headerTopInset: Dp = 0.dp) {
     val context = LocalContext.current
     val preferences = LocalUserPreferences.current
     val ownProfile = preferences.isLogin && data.uid == preferences.uid
     val coverButtonColors = ButtonDefaults.textButtonColors(
         color = Color.Black.copy(alpha = .24f), textColor = Color.White)
     Column(Modifier.fillMaxWidth().testTag("miuix-user-profile")) {
-        Box(Modifier.fillMaxWidth().heightIn(min = 180.dp).background(MiuixTheme.colorScheme.surfaceContainer)) {
-            ImageView(url = data.cover.orEmpty(), modifier = Modifier.matchParentSize())
+        Box(Modifier.fillMaxWidth().heightIn(min = 180.dp + headerTopInset)
+            .background(MiuixTheme.colorScheme.surfaceContainer)) {
+            CoilLoader(url = data.cover, modifier = Modifier.matchParentSize()
+                .testTag("miuix-user-cover").semantics { contentDescription = "查看主页背景图" }
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null,
+                    enabled = !data.cover.isNullOrBlank()) {
+                    ImageShowUtil.startBigImgViewSimple(context, listOf(data.cover.orEmpty()),
+                        userAgent = preferences.userAgent)
+                })
             Box(Modifier.matchParentSize().background(Brush.verticalGradient(
                 listOf(Color.Black.copy(alpha = .12f), Color.Black.copy(alpha = .64f))
             )))
-            Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp,
+                top = 20.dp + headerTopInset, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     ImageView(url = data.userAvatar.orEmpty(), isRound = true, modifier = Modifier.size(64.dp))
                     if (!ownProfile) FlowRow(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),

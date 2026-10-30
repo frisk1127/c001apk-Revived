@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
 import com.example.c001apk.compose.logic.model.HomeFeedResponse
@@ -46,10 +47,11 @@ fun UserInfoCard(
     onFollow: (String, Int) -> Unit,
     onPMUser: (String, String) -> Unit,
     onViewFFFList: (String, String) -> Unit,
+    headerTopInset: Dp = 0.dp,
 ) {
 
     if (com.example.c001apk.compose.ui.theme.isMiuix()) {
-        com.example.c001apk.compose.ui.component.cards.miuix.MiuixUserInfoCard(data, onFollow, onPMUser, onViewFFFList)
+        com.example.c001apk.compose.ui.component.cards.miuix.MiuixUserInfoCard(data, onFollow, onPMUser, onViewFFFList, headerTopInset)
         return
     }
     val context = LocalContext.current

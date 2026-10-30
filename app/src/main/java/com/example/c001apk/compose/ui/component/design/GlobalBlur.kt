@@ -105,7 +105,12 @@ internal fun rememberPageBackdrop(): PageBackdrop? {
 }
 
 @Composable
-internal fun BlurredBar(backdrop: PageBackdrop?, modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
+internal fun BlurredBar(
+    backdrop: PageBackdrop?,
+    modifier: Modifier = Modifier,
+    surfaceAlpha: Float = .82f,
+    content: @Composable BoxScope.() -> Unit,
+) {
     Box(modifier) {
         if (backdrop != null && Build.VERSION.SDK_INT >= 33) {
             val layer = rememberGraphicsLayer()
@@ -115,7 +120,7 @@ internal fun BlurredBar(backdrop: PageBackdrop?, modifier: Modifier = Modifier, 
                 RenderEffect.createBlurEffect(radius, radius, Shader.TileMode.CLAMP).asComposeRenderEffect()
             }
             val surface = MiuixTheme.colorScheme.surface
-            val tint = surface.copy(alpha = .82f)
+            val tint = surface.copy(alpha = surfaceAlpha.coerceIn(0f, 1f))
             var position by remember { mutableStateOf(Offset.Zero) }
             Box(Modifier.matchParentSize().onGloballyPositioned { position = it.positionInWindow() }
                 .drawWithContent {

@@ -21,6 +21,7 @@ fun Scaffold(
     containerColor: Color = Color.Unspecified,
     contentColor: Color = MaterialTheme.colorScheme.onBackground,
     contentWindowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
+    topBarSurfaceAlpha: Float = .82f,
     content: @Composable (PaddingValues) -> Unit,
 ) {
     val miuix = isMiuix()
@@ -31,7 +32,7 @@ fun Scaffold(
     CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides contentColor) {
         top.yukonga.miuix.kmp.basic.Scaffold(
             modifier = modifier,
-            topBar = { BlurredBar(backdrop) { topBar() } },
+            topBar = { BlurredBar(backdrop, surfaceAlpha = topBarSurfaceAlpha) { topBar() } },
             bottomBar = { BlurredBar(backdrop) { bottomBar() } }, snackbarHost = snackbarHost,
             floatingActionButton = { Box(Modifier.padding(bottom = navigationPadding)) { floatingActionButton() } }, contentWindowInsets = contentWindowInsets,
             containerColor = if (containerColor != Color.Unspecified) containerColor
