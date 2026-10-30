@@ -35,14 +35,16 @@ class MainViewModel @Inject constructor(
         private set
     private var navigationGeneration = -1L
     private var navigationStore = androidx.lifecycle.ViewModelStore()
-    fun navigationOwner(generation: Long): androidx.lifecycle.ViewModelStoreOwner {
+    fun navigationOwner(
+        generation: Long,
+        parent: androidx.lifecycle.HasDefaultViewModelProviderFactory,
+    ): androidx.lifecycle.ViewModelStoreOwner {
         if (navigationGeneration != generation) {
             navigationStore.clear()
             navigationStore = androidx.lifecycle.ViewModelStore()
             navigationGeneration = generation
         }
-        val store = navigationStore
-        return object : androidx.lifecycle.ViewModelStoreOwner { override val viewModelStore = store }
+        return NavigationViewModelStoreOwner(navigationStore, parent)
     }
 
     override fun onCleared() {

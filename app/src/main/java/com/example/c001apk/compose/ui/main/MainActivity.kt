@@ -130,7 +130,9 @@ class MainActivity : ComponentActivity() {
             }
 
             val navController = androidx.compose.runtime.key(preferences.sessionGeneration) { rememberAppNavController() }
-            val navigationOwner = androidx.compose.runtime.remember(preferences.sessionGeneration) { viewModel.navigationOwner(preferences.sessionGeneration) }
+            val navigationOwner = androidx.compose.runtime.remember(preferences.sessionGeneration) {
+                viewModel.navigationOwner(preferences.sessionGeneration, this@MainActivity)
+            }
 
             CompositionLocalProvider(
                 LocalUserPreferences provides preferences,
