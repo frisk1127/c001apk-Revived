@@ -96,6 +96,10 @@ import kotlinx.coroutines.launch
 import com.example.c001apk.compose.ui.component.MoreMenuButton
 import com.example.c001apk.compose.ui.theme.isMiuix
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
+import kotlinx.coroutines.flow.first
 
 /**
  * Created by bggRGjQaUbCoE on 2024/6/4
@@ -126,6 +130,12 @@ fun FeedScreen(
     val blur = com.example.c001apk.compose.ui.component.design.isMiuixBlurEnabled()
     val layoutDirection = LocalLayoutDirection.current
     val lazyListState = rememberLazyListState()
+    val articleList = remember(viewModel.feedState) { viewModel.articleList }
+    val feedData = (viewModel.feedState as? LoadingState.Success)?.response
+    // ArticleItem 始终包含作者、底部信息和关联行三个条目。
+    val commentStartIndex = if (articleList.isNullOrEmpty()) 2 else articleList.size + 3 +
+        (if (!feedData?.messageCover.isNullOrEmpty()) 1 else 0) +
+        (if (!feedData?.title.isNullOrEmpty()) 1 else 0)
     var dropdownMenuExpanded by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
@@ -133,8 +143,8 @@ fun FeedScreen(
     var openBottomSheet by remember { mutableStateOf(false) }
     var viewReply by remember { mutableStateOf(false) }
     var selected by rememberSaveable { mutableIntStateOf(0) }
-    val shouldShowSortCard by remember {
-        derivedStateOf { lazyListState.firstVisibleItemIndex > viewModel.itemSize - 1 }
+    val shouldShowSortCard by remember(commentStartIndex) {
+        derivedStateOf { lazyListState.firstVisibleItemIndex >= commentStartIndex }
     }
     val shouldShowTopCard by remember {
         derivedStateOf { lazyListState.firstVisibleItemIndex > 0 }
@@ -168,8 +178,6 @@ fun FeedScreen(
         }
     }
 
-    val articleList = remember(key1 = viewModel.feedState) { viewModel.articleList }
-
     val replyLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
             if (result.resultCode == RESULT_OK) {
@@ -178,9 +186,7 @@ fun FeedScreen(
                     viewModel.updateReply(it)
                     context.makeToast("回复成功")
                     if (viewModel.replyType == "feed" && shouldShowSortCard) {
-                        scope.launch {
-                            lazyListState.scrollToItem(viewModel.itemSize)
-                        }
+                        viewModel.isViewReply = true
                     }
                 }
             }
@@ -228,15 +234,13 @@ fun FeedScreen(
                             .heightIn(min = 48.dp, max = 64.dp)
                             .noRippleClickable {
                                 scope.launch {
-                                    lazyListState.scrollToItem(
-                                        if (shouldShowSortCard || viewReply) {
-                                            viewReply = false
-                                            0
-                                        } else {
-                                            viewReply = true
-                                            viewModel.itemSize
-                                        }
-                                    )
+                                    if (shouldShowSortCard || viewReply) {
+                                        viewReply = false
+                                        lazyListState.scrollToItem(0)
+                                    } else {
+                                        viewReply = true
+                                        viewModel.isViewReply = true
+                                    }
                                 }
                             },
                         contentAlignment = Alignment.CenterStart,
@@ -355,6 +359,22 @@ fun FeedScreen(
             }
         },
     ) { paddingValues ->
+        val commentTopInset = with(LocalDensity.current) {
+            if (blur) paddingValues.calculateTopPadding().roundToPx() else 0
+        }
+        LaunchedEffect(id, viewModel.feedState, viewModel.isViewReply, commentStartIndex) {
+            if (viewModel.isViewReply && viewModel.feedState is LoadingState.Success) {
+                snapshotFlow { lazyListState.layoutInfo.totalItemsCount }.first { it > commentStartIndex }
+                lazyListState.scrollToItem(commentStartIndex)
+                withFrameNanos { }
+                val layout = lazyListState.layoutInfo
+                layout.visibleItemsInfo.firstOrNull { it.key == "sort" }?.let { header ->
+                    val safeTop = layout.viewportStartOffset + commentTopInset
+                    lazyListState.scrollBy((header.offset - safeTop).toFloat())
+                }
+                viewModel.isViewReply = false
+            }
+        }
 
         RefreshContainer(
             indicatorTopInset = if (blur) paddingValues.calculateTopPadding() else 0.dp,
@@ -511,12 +531,6 @@ fun FeedScreen(
                                         if (!miuix) HorizontalDivider()
                                     }
                                 }
-                            }
-                        }
-                        if (viewModel.isViewReply) {
-                            viewModel.isViewReply = false
-                            scope.launch {
-                                lazyListState.scrollToItem(viewModel.itemSize)
                             }
                         }
                     }

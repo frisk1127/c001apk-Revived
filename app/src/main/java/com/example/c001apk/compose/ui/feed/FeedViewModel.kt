@@ -33,7 +33,7 @@ import kotlinx.coroutines.launch
 @HiltViewModel(assistedFactory = FeedViewModel.ViewModelFactory::class)
 class FeedViewModel @AssistedInject constructor(
     @Assisted var id: String,
-    @Assisted var isViewReply: Boolean,
+    @Assisted isViewReply: Boolean,
     networkRepo: NetworkRepo,
     blackListRepo: BlackListRepo,
     private val historyFavoriteRepo: HistoryFavoriteRepo,
@@ -47,7 +47,7 @@ class FeedViewModel @AssistedInject constructor(
     var feedState by mutableStateOf<LoadingState<HomeFeedResponse.Data>>(LoadingState.Loading)
         private set
 
-    var itemSize = 2
+    var isViewReply by mutableStateOf(isViewReply)
 
     lateinit var replyType: String
     private var discussMode: Int = 1
@@ -114,11 +114,6 @@ class FeedViewModel @AssistedInject constructor(
                                 it.type in listOf("text", "image", "shareUrl")
                             }
 
-                            if (!response.messageCover.isNullOrEmpty()) itemSize++
-                            if (!response.title.isNullOrEmpty()) itemSize++
-                            if (response.targetRow != null || !response.relationRows.isNullOrEmpty())
-                                itemSize++
-                            itemSize += articleList?.size ?: 0
                         }
 
                         if (!response.topReplyRows.isNullOrEmpty()) {
@@ -722,7 +717,6 @@ class FeedViewModel @AssistedInject constructor(
         resetParams()
         isRefreshing = false
         articleList = null
-        itemSize = 2
         resetState()
         refresh()
     }
