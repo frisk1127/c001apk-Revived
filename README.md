@@ -15,7 +15,6 @@
 </p>
 
 <p>
-  <a href="https://linux.do/">LINUX DO 社区</a> ·
   <a href="https://github.com/frisk1127/c001apk-Revived/releases">下载应用</a> ·
   <a href="CHANGELOG.md">更新日志</a> ·
   <a href="https://github.com/frisk1127/c001apk-Revived/issues">问题反馈</a>
