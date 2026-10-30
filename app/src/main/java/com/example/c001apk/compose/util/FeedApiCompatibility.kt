@@ -13,7 +13,7 @@ internal fun Request.withFeedApiCompatibility(): Request {
     if (url.host !in setOf("api.coolapk.com", "api2.coolapk.com")) return this
     val privateFeed = method == "POST" && url.encodedPath == "/v6/feed/createFeed" &&
         (body as? FormBody)?.let { form ->
-            (0 until form.size).any { form.name(it) == "status" && form.value(it) == "-1" }
+            (0 until form.size).any { form.name(it) == "publish_status" && form.value(it) == "1" }
         } == true
     if (url.encodedPath != "/v6/feed/replyList" && !privateFeed) return this
 

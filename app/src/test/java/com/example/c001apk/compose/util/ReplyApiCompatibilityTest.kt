@@ -17,7 +17,8 @@ class ReplyApiCompatibilityTest {
             val service = Retrofit.Builder().baseUrl("https://$host")
                 .addConverterFactory(GsonConverterFactory.create()).build().create(ApiService::class.java)
             val original = legacyHeaders(service.postCreateFeed(hashMapOf(
-                "id" to "", "message" to "offline privacy fixture", "type" to "feed", "status" to "-1",
+                "id" to "", "message" to "offline privacy fixture", "type" to "feed",
+                "status" to "1", "publish_status" to "1",
                 "pic" to "image-a.jpg,image-b.jpg", "targetType" to "apk", "targetId" to "123",
             )).request())
             val updated = original.withFeedApiCompatibility()
@@ -31,7 +32,8 @@ class ReplyApiCompatibilityTest {
             assertSame(original.body, updated.body)
             val form = updated.body as FormBody
             val fields = (0 until form.size).associate { form.name(it) to form.value(it) }
-            assertEquals("-1", fields["status"])
+            assertEquals("1", fields["status"])
+            assertEquals("1", fields["publish_status"])
             assertEquals("image-a.jpg,image-b.jpg", fields["pic"])
             assertEquals("123", fields["targetId"])
             for (name in listOf("Cookie", "X-App-Token", "X-App-Device")) {
@@ -43,15 +45,15 @@ class ReplyApiCompatibilityTest {
 
     @Test
     fun publicFeedsAndOtherPostingEndpointsKeepTheirExistingProtocol() {
-        val privateForm = FormBody.Builder().add("status", "-1").build()
+        val privateForm = FormBody.Builder().add("status", "1").add("publish_status", "1").build()
         val requests = listOf(
             Request.Builder().url("https://api.coolapk.com/v6/feed/createFeed")
-                .post(FormBody.Builder().add("status", "1").build()).build(),
+                .post(FormBody.Builder().add("status", "1").add("publish_status", "0").build()).build(),
             Request.Builder().url("https://api.coolapk.com/v6/feed/createFeed")
                 .post(FormBody.Builder().add("message", "no visibility supplied").build()).build(),
-            Request.Builder().url("https://api.coolapk.com/v6/feed/createFeed?status=-1").build(),
+            Request.Builder().url("https://api.coolapk.com/v6/feed/createFeed?publish_status=1").build(),
             Request.Builder().url("https://api.coolapk.com/v6/feed/createFeed")
-                .post("status=-1".toRequestBody()).build(),
+                .post("status=1&publish_status=1".toRequestBody()).build(),
             Request.Builder().url("https://api.coolapk.com/v6/feed/reply").post(privateForm).build(),
             Request.Builder().url("https://example.com/v6/feed/createFeed").post(privateForm).build(),
         )

@@ -1238,8 +1238,10 @@ class ReplyActivity : AppCompatActivity(),
                     viewModel.replyAndFeedData["id"] = ""
                     viewModel.replyAndFeedData["message"] = binding.editText.text.toString()
                     viewModel.replyAndFeedData["type"] = "feed"
-                    viewModel.replyAndFeedData["status"] =
-                        if (binding.checkBox.isChecked) "-1" else "1"
+                    // 可见范围独立于 status，旧的 status=-1 已不再支持。
+                    viewModel.replyAndFeedData["status"] = "1"
+                    viewModel.replyAndFeedData["publish_status"] =
+                        if (binding.checkBox.isChecked) "1" else "0"
 
                     targetType?.let {
                         if (it == "apk")
