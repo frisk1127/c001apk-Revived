@@ -140,7 +140,7 @@ fun SearchResultScreen(
                         onClick = { feedType = type })
                 }),
             DropdownItem(text = "排序", summary = orderType.title,
-                children = SearchOrderType.entries.map { order ->
+                children = SearchOrderType.entries.filter { it != SearchOrderType.DATELINE }.map { order ->
                     DropdownItem(text = order.title, selected = orderType == order,
                         onClick = { orderType = order })
                 }),
@@ -248,7 +248,7 @@ fun SearchResultScreen(
                                 expanded = orderMenuExpanded,
                                 onDismissRequest = { orderMenuExpanded = false }
                             ) {
-                                SearchOrderType.entries.forEach { order ->
+                                SearchOrderType.entries.filter { it != SearchOrderType.DATELINE }.forEach { order ->
                                     Row(
                                         modifier = Modifier
                                             .clickable {

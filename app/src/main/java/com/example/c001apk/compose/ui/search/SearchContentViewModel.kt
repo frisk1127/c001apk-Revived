@@ -18,8 +18,6 @@ class SearchContentViewModel @AssistedInject constructor(
     @Assisted("keyword") val keyword: String,
     @Assisted("pageType") val pageType: String?,
     @Assisted("pageParam") var pageParam: String?,
-    @Assisted val searchFeedType: SearchFeedType,
-    @Assisted val sortType: SearchOrderType,
     networkRepo: NetworkRepo,
     blackListRepo: BlackListRepo,
 ) : BaseViewModel(networkRepo, blackListRepo) {
@@ -31,23 +29,14 @@ class SearchContentViewModel @AssistedInject constructor(
             @Assisted("keyword") keyword: String,
             @Assisted("pageType") pageType: String?,
             @Assisted("pageParam") pageParam: String?,
-            searchFeedType: SearchFeedType,
-            sortType: SearchOrderType,
         ): SearchContentViewModel
     }
 
-    val feedType: String = when (searchFeedType) {
-        SearchFeedType.ALL -> "all"
-        SearchFeedType.FEED -> "feed"
-        SearchFeedType.ARTICLE -> "feedArticle"
-        SearchFeedType.COOLPIC -> "picture"
-        SearchFeedType.COMMENT -> "comment"
-        SearchFeedType.RATING -> "rating"
-        SearchFeedType.ANSWER -> "answer"
-        SearchFeedType.QUESTION -> "question"
-        SearchFeedType.VOTE -> "vote"
-    }
-    val sort: String = if (type == "feed") sortType.apiValue else "default"
+    var feedType: String = "all"
+    var sort: String = "default"
+
+    var searchFeedType = SearchFeedType.ALL
+    var sortType = SearchOrderType.COMPREHENSIVE
 
     init {
         fetchData()
