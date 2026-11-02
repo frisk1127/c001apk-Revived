@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.ClearAll
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material.icons.filled.Search
 import com.example.c001apk.compose.ui.component.design.AlertDialog
 import com.example.c001apk.compose.ui.component.design.CircularProgressIndicator
 import com.example.c001apk.compose.ui.component.design.DropdownMenu
@@ -52,6 +53,8 @@ import com.example.c001apk.compose.logic.state.LoadingState
 import com.example.c001apk.compose.ui.component.BackButton
 import com.example.c001apk.compose.ui.component.cards.HistoryCard
 import com.example.c001apk.compose.ui.component.cards.LoadingCard
+import com.example.c001apk.compose.ui.component.design.SearchInputBar
+import androidx.compose.ui.focus.FocusRequester
 import com.example.c001apk.compose.util.ReportType
 import com.example.c001apk.compose.util.makeToast
 import java.text.SimpleDateFormat
@@ -62,9 +65,7 @@ import java.util.Locale
  * Created by bggRGjQaUbCoE on 2024/6/17
  */
 
-enum class HistoryType {
-    FAV, HISTORY
-}
+enum class HistoryType { FAV, CLOUD, HISTORY }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,16 +89,33 @@ fun HistoryScreen(
     val context = LocalContext.current
     var showClearDialog by remember { mutableStateOf(false) }
     var showBackupMenu by remember { mutableStateOf(false) }
+    var searchMode by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    val searchFocus = remember { FocusRequester() }
+    val visibleData = remember(dataList, searchQuery) {
+        if (searchQuery.isBlank()) dataList else dataList.filter {
+            listOf(it.message, it.uname, it.device).joinToString(" ").contains(searchQuery, ignoreCase = true)
+        }
+    }
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri -> uri?.let(viewModel::exportFavorites) }
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri -> uri?.let(viewModel::importFavorites) }
+    var exportHtml by remember { mutableStateOf(false) }
+    val documentLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri -> uri?.let { viewModel.exportFavoritesDocument(it, exportHtml) } }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
+            if (type in listOf(HistoryType.FAV.name, HistoryType.CLOUD.name) && searchMode) {
+                SearchInputBar(query = searchQuery, onQueryChange = { searchQuery = it },
+                    onSearch = { searchQuery = it }, hint = "搜索本地收藏",
+                    onBack = { searchMode = false; searchQuery = "" }, focusRequester = searchFocus)
+            } else {
             TopAppBar(
                 windowInsets = WindowInsets.systemBars
                     .only(WindowInsetsSides.Start + WindowInsetsSides.Top),
@@ -106,10 +124,16 @@ fun HistoryScreen(
                 },
                 title = when (type) {
                         HistoryType.FAV.name -> "本地收藏"
+                        HistoryType.CLOUD.name -> "云端收藏"
                         HistoryType.HISTORY.name -> "浏览历史"
                         else -> type
                     },
                 actions = {
+                    if (type in listOf(HistoryType.FAV.name, HistoryType.CLOUD.name)) {
+                        IconButton(onClick = { searchMode = true }) {
+                            Icon(Icons.Default.Search, contentDescription = "搜索收藏")
+                        }
+                    }
                     AnimatedVisibility(
                         visible = dataList.isNotEmpty(),
                         enter = fadeIn(),
@@ -122,7 +146,7 @@ fun HistoryScreen(
                             Icon(imageVector = Icons.Default.ClearAll, contentDescription = "清空列表")
                         }
                     }
-                    if (type == HistoryType.FAV.name) {
+                    if (type in listOf(HistoryType.FAV.name, HistoryType.CLOUD.name)) {
                         Box {
                             IconButton(
                                 enabled = !viewModel.isBackupBusy,
@@ -143,6 +167,7 @@ fun HistoryScreen(
                             ) {
                                 DropdownMenuItem(
                                     text = { Text("导入收藏") },
+                                    enabled = type == HistoryType.FAV.name,
                                     leadingIcon = { Icon(Icons.Default.Download, contentDescription = null) },
                                     onClick = com.example.c001apk.compose.ui.component.rememberHapticClick {
                                         showBackupMenu = false
@@ -156,7 +181,7 @@ fun HistoryScreen(
                                 DropdownMenuItem(
                                     text = { Text("导出收藏") },
                                     leadingIcon = { Icon(Icons.Default.Upload, contentDescription = null) },
-                                    enabled = dataList.isNotEmpty(),
+                                    enabled = type == HistoryType.FAV.name && dataList.isNotEmpty(),
                                     onClick = com.example.c001apk.compose.ui.component.rememberHapticClick {
                                         showBackupMenu = false
                                         val date = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.ROOT).format(Date())
@@ -167,11 +192,28 @@ fun HistoryScreen(
                                         }
                                     },
                                 )
+                                DropdownMenuItem(
+                                    text = { Text("导出 Markdown") },
+                                    enabled = dataList.isNotEmpty(),
+                                    onClick = com.example.c001apk.compose.ui.component.rememberHapticClick {
+                                        showBackupMenu = false; exportHtml = false
+                                        documentLauncher.launch("c001apk_favorites.md")
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("导出 HTML") },
+                                    enabled = dataList.isNotEmpty(),
+                                    onClick = com.example.c001apk.compose.ui.component.rememberHapticClick {
+                                        showBackupMenu = false; exportHtml = true
+                                        documentLauncher.launch("c001apk_favorites.html")
+                                    },
+                                )
                             }
                         }
                     }
                 }
             )
+            }
         },
     ) { paddingValues ->
         val blur = com.example.c001apk.compose.ui.component.design.isMiuixBlurEnabled()
@@ -192,7 +234,7 @@ fun HistoryScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
 
-            items(dataList, key = { it.id }) {
+            items(visibleData, key = { it.id }) {
                 androidx.compose.runtime.LaunchedEffect(it.id, it.mediaJson) {
                     if (it.mediaJson == null) viewModel.loadMedia(it.id)
                 }
@@ -214,7 +256,7 @@ fun HistoryScreen(
 
         }
 
-        if (dataList.isEmpty()) {
+        if (visibleData.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center

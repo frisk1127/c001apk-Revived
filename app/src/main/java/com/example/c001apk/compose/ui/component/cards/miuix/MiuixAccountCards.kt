@@ -73,24 +73,29 @@ fun MiuixAccountStats(modifier: Modifier, values: List<String>, onOpen: (String,
 
 @Composable
 fun MiuixAccountShortcuts(modifier: Modifier, onOpen: (String?, String) -> Unit, onHistory: (String) -> Unit) {
-    val labels = listOf("本地收藏", "浏览历史", "我的常去", "我的收藏", "我的赞", "我的回复")
+    val labels = listOf("本地收藏", "云端收藏", "浏览历史", "我的常去", "我的收藏", "我的赞", "我的回复")
     val icons = listOf(MiuixIcons.Medium.Folder, MiuixIcons.Regular.Recent, MiuixIcons.Medium.Pin,
         MiuixIcons.Medium.Favorites, AppGlyphs.Like, MiuixIcons.Medium.Reply)
     Card(modifier.fillMaxWidth()) {
-        repeat(2) { row ->
+        repeat((labels.size + 2) / 3) { row ->
             Row(Modifier.fillMaxWidth()) {
                 repeat(3) { col ->
                     val index = row * 3 + col
-                    val enabled = index < 2 || CookieUtil.isLogin
+                    if (index >= labels.size) {
+                        Spacer(Modifier.weight(1f))
+                        return@repeat
+                    }
+                    val enabled = index < 3 || CookieUtil.isLogin
                     Column(Modifier.weight(1f).contentPress(enabled = enabled, pressedScale = .96f)
                         .clickable(enabled = enabled, role = Role.Button) {
                         when (index) {
                             0 -> onHistory(HistoryType.FAV.name)
-                            1 -> onHistory(HistoryType.HISTORY.name)
-                            2 -> onOpen(CookieUtil.uid, FFFListType.RECENT.name)
-                            3 -> onOpen(null, FFFListType.COLLECTION.name)
-                            4 -> onOpen(CookieUtil.uid, FFFListType.LIKE.name)
-                            5 -> onOpen(CookieUtil.uid, FFFListType.REPLY.name)
+                            1 -> onHistory(HistoryType.CLOUD.name)
+                            2 -> onHistory(HistoryType.HISTORY.name)
+                            3 -> onOpen(CookieUtil.uid, FFFListType.RECENT.name)
+                            4 -> onOpen(null, FFFListType.COLLECTION.name)
+                            5 -> onOpen(CookieUtil.uid, FFFListType.LIKE.name)
+                            6 -> onOpen(CookieUtil.uid, FFFListType.REPLY.name)
                         }
                     }.padding(vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp)) {

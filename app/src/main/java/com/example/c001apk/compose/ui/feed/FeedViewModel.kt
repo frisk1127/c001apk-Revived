@@ -87,6 +87,8 @@ class FeedViewModel @AssistedInject constructor(
             HistoryType.HISTORY -> historyFavoriteRepo.insertHistory(
                 FeedEntity(id, feedUid, username, avatar, device, message, pubDate, mediaJson = mediaJson)
             )
+
+            HistoryType.CLOUD -> Unit
         }
 
     }
