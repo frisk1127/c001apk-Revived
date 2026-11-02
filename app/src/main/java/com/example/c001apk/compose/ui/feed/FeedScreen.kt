@@ -66,6 +66,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.c001apk.compose.R
 import com.example.c001apk.compose.constant.Constants.EMPTY_STRING
 import com.example.c001apk.compose.logic.model.HomeFeedResponse
+import com.example.c001apk.compose.logic.model.FeedEntity
+import com.example.c001apk.compose.logic.backup.FavoriteDocumentExport
 import com.example.c001apk.compose.logic.providable.LocalDragHandoffToParent
 import com.example.c001apk.compose.logic.state.LoadingState
 import com.example.c001apk.compose.ui.base.LikeType
@@ -100,6 +102,9 @@ import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import kotlinx.coroutines.flow.first
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * Created by bggRGjQaUbCoE on 2024/6/4
@@ -137,6 +142,21 @@ fun FeedScreen(
         (if (!feedData?.messageCover.isNullOrEmpty()) 1 else 0) +
         (if (!feedData?.title.isNullOrEmpty()) 1 else 0)
     var dropdownMenuExpanded by remember { mutableStateOf(false) }
+    var exportHtml by remember { mutableStateOf(false) }
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        val response = (viewModel.feedState as? LoadingState.Success)?.response ?: return@rememberLauncherForActivityResult
+        runCatching {
+            val item = FeedEntity(response.id.orEmpty(), response.uid.orEmpty(), response.username.orEmpty(),
+                response.userAvatar.orEmpty(), response.deviceTitle.orEmpty(), response.message.orEmpty(),
+                response.dateline.toString(), mediaJson = com.example.c001apk.compose.logic.model.FeedMediaJson.encode(response))
+            context.contentResolver.openOutputStream(uri)?.bufferedWriter(Charsets.UTF_8)?.use {
+                if (exportHtml) FavoriteDocumentExport.writeHtml(listOf(item), it)
+                else FavoriteDocumentExport.writeMarkdown(listOf(item), it)
+            }
+            context.makeToast("文章已导出")
+        }.onFailure { context.makeToast("导出失败，请重试") }
+    }
 
     val scope = rememberCoroutineScope()
     val bottomSheetState = rememberModalBottomSheetState(true)
@@ -303,6 +323,14 @@ fun FeedScreen(
                                         viewModel.onFav()
                                     }
                                 )
+                                DropdownMenuItem(text = { Text("导出 Markdown") }, onClick = {
+                                    dropdownMenuExpanded = false; exportHtml = false
+                                    exportLauncher.launch("c001apk_${id}.md")
+                                })
+                                DropdownMenuItem(text = { Text("导出 HTML") }, onClick = {
+                                    dropdownMenuExpanded = false; exportHtml = true
+                                    exportLauncher.launch("c001apk_${id}.html")
+                                })
                                 DropdownMenuItem(
                                     text = { Text(if (viewModel.isCloudFav) "取消云端收藏" else "收藏到云端") },
                                     enabled = isLogin,
