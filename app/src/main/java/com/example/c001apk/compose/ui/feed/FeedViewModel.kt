@@ -104,6 +104,7 @@ class FeedViewModel @AssistedInject constructor(
                         feedUsername = response.username.orEmpty()
                         feedAvatar = response.userInfo?.userAvatar ?: response.userAvatar.orEmpty()
                         replyCount = response.replynum.orEmpty()
+                        isCloudFav = response.userAction?.favorite == 1
                         feedTypeName = response.feedTypeName.orEmpty()
                         feedType = response.feedType.orEmpty()
 

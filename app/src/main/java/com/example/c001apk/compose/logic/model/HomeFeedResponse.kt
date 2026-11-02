@@ -337,7 +337,7 @@ data class HomeFeedResponse(
     @Parcelize
     data class UserAction(
         var like: Int?,
-        //val favorite: Int?,
+        @com.google.gson.annotations.SerializedName("favorite") var favorite: Int? = 0,
         var follow: Int? = 0,
         //val collect: Int?,
         //var followAuthor: Int?,
