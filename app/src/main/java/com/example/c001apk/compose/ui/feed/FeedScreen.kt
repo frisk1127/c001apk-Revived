@@ -304,6 +304,14 @@ fun FeedScreen(
                                     }
                                 )
                                 DropdownMenuItem(
+                                    text = { Text(if (viewModel.isCloudFav) "取消云端收藏" else "收藏到云端") },
+                                    enabled = isLogin,
+                                    onClick = {
+                                        dropdownMenuExpanded = false
+                                        viewModel.onCloudFav()
+                                    }
+                                )
+                                DropdownMenuItem(
                                     text = {
                                         Text(
                                             if (viewModel.isBlocked) {

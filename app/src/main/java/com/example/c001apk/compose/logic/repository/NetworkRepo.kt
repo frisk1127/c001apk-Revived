@@ -87,6 +87,14 @@ class NetworkRepo @Inject constructor(
         ).await()
     }
 
+    suspend fun getFavoriteList(page: Int, firstItem: String?, lastItem: String?) = flowList {
+        apiService.getFavoriteList(page = page, firstItem = firstItem, lastItem = lastItem).await()
+    }
+
+    suspend fun favoriteFeed(id: String) = fire { Result.success(apiService.favoriteFeed(id).await()) }
+
+    suspend fun unfavoriteFeed(id: String) = fire { Result.success(apiService.unfavoriteFeed(id).await()) }
+
     suspend fun getReply2Reply(id: String, page: Int, lastItem: String?) = flowList {
         apiService.getReply2Reply(id, page, lastItem).await()
     }

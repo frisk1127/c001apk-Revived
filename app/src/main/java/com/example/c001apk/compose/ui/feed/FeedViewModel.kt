@@ -68,6 +68,7 @@ class FeedViewModel @AssistedInject constructor(
     var replyCount by mutableStateOf("0")
     var isFav by mutableStateOf(false)
     var isBlocked by mutableStateOf(false)
+    var isCloudFav by mutableStateOf(false)
 
     private suspend fun recordHistory(
         username: String,
@@ -490,6 +491,24 @@ class FeedViewModel @AssistedInject constructor(
             }
             isFav = !isFav
             toastText = if (isFav) "收藏成功" else "取消收藏成功"
+        }
+    }
+
+    fun onCloudFav() {
+        if (!CookieUtil.isLogin) {
+            toastText = "请先登录"
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = if (isCloudFav) networkRepo.unfavoriteFeed(id) else networkRepo.favoriteFeed(id)
+            result.collect { response ->
+                if (response.isSuccess) {
+                    isCloudFav = !isCloudFav
+                    toastText = if (isCloudFav) "已收藏到云端" else "已取消云端收藏"
+                } else {
+                    toastText = response.exceptionOrNull()?.message ?: "云端收藏失败"
+                }
+            }
         }
     }
 

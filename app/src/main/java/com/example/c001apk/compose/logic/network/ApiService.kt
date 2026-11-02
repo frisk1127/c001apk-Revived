@@ -70,6 +70,20 @@ interface ApiService {
         @Query("showAnonymous") showAnonymous: Int = -1
     ): Call<HomeFeedResponse>
 
+    @GET("/v6/favorite/list")
+    fun getFavoriteList(
+        @Query("type") type: String = "feed",
+        @Query("page") page: Int,
+        @Query("firstItem") firstItem: String?,
+        @Query("lastItem") lastItem: String?,
+    ): Call<HomeFeedResponse>
+
+    @POST("/v6/feed/favorite")
+    fun favoriteFeed(@Query("id") id: String): Call<LikeResponse>
+
+    @POST("/v6/feed/unFavorite")
+    fun unfavoriteFeed(@Query("id") id: String, @Query("targetType") targetType: String = "feed"): Call<LikeResponse>
+
     @GET("/v6/feed/replyList?listType=&discussMode=0&feedType=feed_reply&blockStatus=0&fromFeedAuthor=0")
     fun getReply2Reply(
         @Query("id") id: String,
