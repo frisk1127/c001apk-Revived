@@ -1,5 +1,12 @@
 package com.example.c001apk.compose.ui.ffflist
 
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
+import com.example.c001apk.compose.ui.component.design.Icon
+import com.example.c001apk.compose.ui.component.design.IconButton
+import com.example.c001apk.compose.ui.component.design.FavoriteSearchHeader
+import com.example.c001apk.compose.ui.theme.isMiuix
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -73,43 +80,59 @@ fun FFFListScreen(
     var refreshState by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
+    val searchable = type == FFFListType.COLLECTION.name
+    val coordinatedRefresh = isMiuix() && (searchable || type == FFFListType.COLLECTION_ITEM.name)
+    var searchMode by rememberSaveable(type, id) { mutableStateOf(false) }
+    var searchQuery by rememberSaveable(type, id) { mutableStateOf("") }
     val pageScroll = MiuixScrollBehavior()
     Scaffold(
-        modifier = Modifier.fillMaxSize().then(if (com.example.c001apk.compose.ui.theme.isMiuix()) Modifier.nestedScroll(pageScroll.nestedScrollConnection) else Modifier),
+        modifier = Modifier.fillMaxSize().then(if (isMiuix() && !coordinatedRefresh) Modifier.nestedScroll(pageScroll.nestedScrollConnection) else Modifier),
         topBar = {
-            PreferenceTopBar(
-                scrollBehavior = pageScroll,
-                onBack = onBackClick,
-                title = title ?: when (type) {
-                            FFFListType.FEED.name -> "我的动态"
+            FavoriteSearchHeader(
+                enabled = searchable,
+                query = searchQuery, onQueryChange = { searchQuery = it },
+                expanded = searchMode, onExpandedChange = { searchMode = it },
+                hint = "搜索收藏正文",
+            ) {
+                PreferenceTopBar(
+                    scrollBehavior = pageScroll,
+                    onBack = onBackClick,
+                    title = title ?: when (type) {
+                                FFFListType.FEED.name -> "我的动态"
 
-                            FFFListType.FOLLOW.name -> "我的关注"
+                                FFFListType.FOLLOW.name -> "我的关注"
 
-                            FFFListType.USER_FOLLOW.name -> {
-                                if (isMe)
-                                    "我关注的人"
-                                else
-                                    "TA关注的人"
-                            }
+                                FFFListType.USER_FOLLOW.name -> {
+                                    if (isMe)
+                                        "我关注的人"
+                                    else
+                                        "TA关注的人"
+                                }
 
-                            FFFListType.FAN.name -> {
-                                if (isMe)
-                                    "关注我的人"
-                                else
-                                    "TA的粉丝"
-                            }
+                                FFFListType.FAN.name -> {
+                                    if (isMe)
+                                        "关注我的人"
+                                    else
+                                        "TA的粉丝"
+                                }
 
-                            FFFListType.RECENT.name -> "我的常去"
+                                FFFListType.RECENT.name -> "我的常去"
 
-                            FFFListType.LIKE.name -> "我的赞"
+                                FFFListType.LIKE.name -> "我的赞"
 
-                            FFFListType.REPLY.name -> "我的回复"
+                                FFFListType.REPLY.name -> "我的回复"
 
-                            FFFListType.COLLECTION.name -> "我的收藏"
+                                FFFListType.COLLECTION.name -> "云端收藏"
 
-                            else -> EMPTY_STRING
+                                else -> EMPTY_STRING
+                            },
+                    actions = {
+                        if (searchable && !isMiuix()) IconButton(onClick = { searchMode = true }) {
+                            Icon(Icons.Default.Search, "搜索云端收藏")
                         }
-            )
+                    },
+                )
+            }
         }
     ) { paddingValues ->
         val blurList = com.example.c001apk.compose.ui.component.design.isMiuixBlurEnabled() &&
@@ -223,6 +246,8 @@ fun FFFListScreen(
                 else -> {
                     if (!com.example.c001apk.compose.ui.theme.isMiuix()) HorizontalDivider()
                     FFFContentScreen(
+                        searchQuery = if (searchable) searchQuery else "",
+                        topAppBarScrollBehavior = if (coordinatedRefresh) pageScroll else null,
                         id = id,
                         uid = uid,
                         type = type,

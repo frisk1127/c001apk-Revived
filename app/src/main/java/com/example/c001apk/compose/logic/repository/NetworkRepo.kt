@@ -6,6 +6,7 @@ import com.example.c001apk.compose.di.Api1Service
 import com.example.c001apk.compose.di.Api1ServiceNoRedirect
 import com.example.c001apk.compose.di.Api2Service
 import com.example.c001apk.compose.logic.model.FeedContentResponse
+import com.example.c001apk.compose.logic.model.CloudCollection
 import com.example.c001apk.compose.logic.model.HomeFeedResponse
 import com.example.c001apk.compose.logic.model.ProductConfigData
 import com.example.c001apk.compose.logic.network.ApiService
@@ -13,6 +14,8 @@ import com.example.c001apk.compose.logic.state.LoadingState
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.IOException
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import okhttp3.MultipartBody
@@ -86,14 +89,6 @@ class NetworkRepo @Inject constructor(
             type, feedType, sort, keyWord, pageType, pageParam, page, lastItem
         ).await()
     }
-
-    suspend fun getFavoriteList(page: Int, firstItem: String?, lastItem: String?) = flowList {
-        apiService.getFavoriteList(page = page, firstItem = firstItem, lastItem = lastItem).await()
-    }
-
-    suspend fun favoriteFeed(id: String) = fire { Result.success(apiService.favoriteFeed(id).await()) }
-
-    suspend fun unfavoriteFeed(id: String) = fire { Result.success(apiService.unfavoriteFeed(id).await()) }
 
     suspend fun getReply2Reply(id: String, page: Int, lastItem: String?) = flowList {
         apiService.getReply2Reply(id, page, lastItem).await()
@@ -272,6 +267,69 @@ class NetworkRepo @Inject constructor(
         Result.success(
             apiService.getCollectionList(url, uid, id, showDefault, page, lastItem).await()
         )
+    }
+
+    suspend fun getFeedCollections(feedId: String): List<CloudCollection> = withContext(Dispatchers.IO) {
+        val collections = linkedMapOf<String, CloudCollection>()
+        val cursors = mutableSetOf<String>()
+        var page = 1
+        var firstItem: String? = null
+        var lastItem: String? = null
+        while (true) {
+            val items = apiService.getFeedCollections(feedId, page, firstItem, lastItem).checkedData()
+            if (items.isEmpty()) break
+            items.filter { it.entityType == null || it.entityType == "collection" }.forEach { item ->
+                item.id?.takeIf { it.isNotBlank() }?.let { collections[it] = item }
+            }
+            if (firstItem == null) firstItem = items.first().entityId ?: items.first().id
+            val cursor = items.last().entityId ?: items.last().id
+            if (cursor.isNullOrBlank() || !cursors.add(cursor)) break
+            lastItem = cursor
+            page++
+        }
+        collections.values.toList()
+    }
+
+    suspend fun updateFeedCollections(feedId: String, selectedIds: Set<String>, removedIds: Set<String>) =
+        withContext(Dispatchers.IO) {
+            apiService.updateCollectionItem(mapOf(
+                "id" to selectedIds.joinToString(","),
+                "cancelId" to removedIds.joinToString(","),
+                "targetId" to feedId,
+                "type" to "feed",
+                "trace" to "",
+            )).checkedData()
+        }
+
+    suspend fun createCollection(title: String, isPublic: Boolean): CloudCollection = withContext(Dispatchers.IO) {
+        val name = title.trim()
+        require(name.isNotEmpty()) { "请输入收藏夹名称" }
+        val fields = linkedMapOf(
+            "isOpen" to if (isPublic) "1" else "0",
+            "pic" to "",
+            "description" to "",
+            "title" to name,
+            "sourceId" to "",
+        )
+        val result = apiService.createCollection(fields.map { (key, value) ->
+            MultipartBody.Part.createFormData(key, value)
+        }).checkedData()
+        val id = when {
+            result.isJsonPrimitive -> result.asString
+            result.isJsonObject -> (result.asJsonObject.get("id") ?: result.asJsonObject.get("collectionId"))
+                ?.takeIf { it.isJsonPrimitive }?.asString
+            else -> null
+        }?.takeIf { it.toLongOrNull()?.let { number -> number > 0 } == true }
+            ?: throw IOException("收藏夹可能已创建，但未返回有效 ID，请刷新列表确认后再收藏")
+        CloudCollection(id, null, "collection", name, 0)
+    }
+
+    suspend fun deleteCollection(id: String) = withContext(Dispatchers.IO) {
+        require(id.toLongOrNull()?.let { it > 0 } == true) { "无效的收藏夹" }
+        val result = apiService.deleteCollection(id).checkedData()
+        if (result.isJsonPrimitive && (result.asString == "0" || result.asString == "false")) {
+            throw IOException("删除收藏夹失败，请重试")
+        }
     }
 
     suspend fun postDelete(url: String, id: String) = fire {

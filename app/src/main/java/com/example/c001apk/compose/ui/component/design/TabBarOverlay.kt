@@ -80,7 +80,8 @@ internal fun TabBarSurface(
     }
     val latestContent = rememberUpdatedState(content)
     val locals = rememberUpdatedState(currentCompositionLocalContext)
-    val pinnedTop = rememberUpdatedState(with(LocalDensity.current) { pinnedTopInset?.roundToPx() })
+    val refreshOffset = LocalRefreshContentOffset.current
+    val pinnedTop = rememberUpdatedState(with(LocalDensity.current) { pinnedTopInset?.let { (it + refreshOffset).roundToPx() } })
     val entry = remember(host, backdrop) { TabBarEntry(backdrop, locals, latestContent, pinnedTop) }
     LaunchedEffect(entry, pinnedTop.value) { host.update(entry) }
     DisposableEffect(host, entry) {

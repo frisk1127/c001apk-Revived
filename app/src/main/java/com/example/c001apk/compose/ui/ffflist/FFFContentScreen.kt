@@ -2,6 +2,10 @@ package com.example.c001apk.compose.ui.ffflist
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -11,6 +15,9 @@ import com.example.c001apk.compose.ui.component.design.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import com.example.c001apk.compose.ui.component.design.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.foundation.lazy.rememberLazyListState
 import com.example.c001apk.compose.ui.component.design.MenuAction
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,6 +30,10 @@ import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.c001apk.compose.constant.Constants.EMPTY_STRING
 import com.example.c001apk.compose.ui.component.CommonScreen
+import com.example.c001apk.compose.ui.collection.DeleteCollectionDialog
+import com.example.c001apk.compose.ui.collection.CloudCollectionSearchViewModel
+import com.example.c001apk.compose.ui.collection.CloudCollectionSearchResults
+import com.example.c001apk.compose.logic.providable.LocalUserPreferences
 import com.example.c001apk.compose.util.ReportType
 import com.example.c001apk.compose.util.makeToast
 
@@ -43,6 +54,8 @@ fun FFFContentScreen(
     onCopyText: (String?) -> Unit,
     onReport: (String, ReportType) -> Unit,
     onViewFFFList: (String?, String, String?, String?) -> Unit,
+    searchQuery: String = "",
+    topAppBarScrollBehavior: ScrollBehavior? = null,
 ) {
 
     val viewModel =
@@ -61,13 +74,31 @@ fun FFFContentScreen(
                     FFFListType.COLLECTION_ITEM.name -> "/v6/collection/itemList"
                     else -> EMPTY_STRING
                 },
-                uid = uid, id = id, showDefault = if (type.contains("COLLECTION")) 0 else null
+                uid = uid, id = id, showDefault = if (type == FFFListType.COLLECTION.name) 1 else null
             )
         }
 
     var showRecentDialog by remember { mutableStateOf(false) }
+    val prefs = LocalUserPreferences.current
+    val canManageCollections = type == FFFListType.COLLECTION.name && id == null &&
+        prefs.isLogin && (uid == null || uid == prefs.uid)
+    val folderListState = rememberLazyListState()
+    val searchViewModel = if (type == FFFListType.COLLECTION.name) {
+        hiltViewModel<CloudCollectionSearchViewModel>(key = "collection-search:$uid:${prefs.sessionGeneration}")
+    } else null
+    LaunchedEffect(searchQuery, uid, prefs.uid, prefs.sessionGeneration) {
+        searchViewModel?.updateQuery(searchQuery, uid, prefs.uid, prefs.sessionGeneration)
+    }
+    DisposableEffect(searchViewModel) { onDispose { searchViewModel?.stop() } }
 
-    CommonScreen(
+    if (searchViewModel != null && searchQuery.isNotBlank()) {
+        Box(Modifier.fillMaxSize().then(topAppBarScrollBehavior?.let { Modifier.nestedScroll(it.nestedScrollConnection) } ?: Modifier)) {
+            CloudCollectionSearchResults(searchQuery, searchViewModel.state, paddingValues,
+                searchViewModel::retry, onViewFeed)
+        }
+    } else CommonScreen(
+        lazyListState = folderListState,
+        topAppBarScrollBehavior = topAppBarScrollBehavior,
         needTopPadding = com.example.c001apk.compose.ui.component.design.isMiuixBlurEnabled(),
         viewModel = viewModel,
         refreshState = refreshState,
@@ -79,6 +110,9 @@ fun FFFContentScreen(
         onCopyText = onCopyText,
         onReport = onReport,
         onViewFFFList = onViewFFFList,
+        onDeleteCollection = if (canManageCollections) ({ collection ->
+            viewModel.requestDeleteCollection(collection, prefs.uid, prefs.sessionGeneration)
+        }) else null,
         onHandleRecent = { actionId, targetId, targetType, isTop ->
             viewModel.actionId = actionId
             viewModel.targetId = targetId
@@ -87,6 +121,16 @@ fun FFFContentScreen(
             showRecentDialog = true
         },
     )
+
+    if (canManageCollections) viewModel.collectionToDelete?.let { collection ->
+        DeleteCollectionDialog(
+            title = collection.title.orEmpty(),
+            deleting = viewModel.deletingCollection,
+            error = viewModel.collectionDeleteError,
+            onDismiss = viewModel::cancelDeleteCollection,
+            onConfirm = viewModel::deleteCollection,
+        )
+    }
 
     val context = LocalContext.current
     viewModel.toastText?.let {

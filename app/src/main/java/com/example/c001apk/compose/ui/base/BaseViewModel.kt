@@ -38,8 +38,8 @@ abstract class BaseViewModel(
 
     var page = 1
     var firstLaunch = 1
-    var isLoadMore = false
-    var isEnd = false
+    var isLoadMore by mutableStateOf(false)
+    var isEnd by mutableStateOf(false)
     var firstItem: String? = null
     var lastItem: String? = null
 

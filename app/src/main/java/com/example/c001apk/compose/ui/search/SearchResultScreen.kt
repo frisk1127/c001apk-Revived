@@ -159,7 +159,7 @@ fun SearchResultScreen(
                 title = {
                     Column(
                         modifier = Modifier
-                            .fillMaxSize()
+                            .fillMaxWidth()
                             .noRippleClickable { onBackClick() },
                         verticalArrangement = Arrangement.Center,
                     ) {

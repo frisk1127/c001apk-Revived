@@ -3,6 +3,9 @@ package com.example.c001apk.compose.logic.network
 import com.example.c001apk.compose.constant.Constants.EMPTY_STRING
 import com.example.c001apk.compose.logic.model.CheckCountResponse
 import com.example.c001apk.compose.logic.model.CheckResponse
+import com.example.c001apk.compose.logic.model.CloudCollection
+import com.example.c001apk.compose.logic.model.CollectionResponse
+import com.google.gson.JsonElement
 import com.example.c001apk.compose.logic.model.CreateFeedResponse
 import com.example.c001apk.compose.logic.model.EventDetailResponse
 import com.example.c001apk.compose.logic.model.FeedContentResponse
@@ -15,6 +18,7 @@ import com.example.c001apk.compose.logic.model.TotalReplyResponse
 import okhttp3.MultipartBody
 import okhttp3.ResponseBody
 import retrofit2.Call
+import retrofit2.http.Field
 import retrofit2.http.FieldMap
 import retrofit2.http.FormUrlEncoded
 import retrofit2.http.GET
@@ -69,20 +73,6 @@ interface ApiService {
         @Query("lastItem") lastItem: String?,
         @Query("showAnonymous") showAnonymous: Int = -1
     ): Call<HomeFeedResponse>
-
-    @GET("/v6/favorite/list")
-    fun getFavoriteList(
-        @Query("type") type: String = "feed",
-        @Query("page") page: Int,
-        @Query("firstItem") firstItem: String?,
-        @Query("lastItem") lastItem: String?,
-    ): Call<HomeFeedResponse>
-
-    @POST("/v6/feed/favorite")
-    fun favoriteFeed(@Query("id") id: String): Call<LikeResponse>
-
-    @POST("/v6/feed/unFavorite")
-    fun unfavoriteFeed(@Query("id") id: String, @Query("targetType") targetType: String = "feed"): Call<LikeResponse>
 
     @GET("/v6/feed/replyList?listType=&discussMode=0&feedType=feed_reply&blockStatus=0&fromFeedAuthor=0")
     fun getReply2Reply(
@@ -285,6 +275,42 @@ interface ApiService {
         @Query("page") page: Int,
         @Query("lastItem") lastItem: String?
     ): Call<HomeFeedResponse>
+
+    @GET("/v6/collection/list")
+    suspend fun getFeedCollections(
+        @Query("id") feedId: String,
+        @Query("page") page: Int,
+        @Query("firstItem") firstItem: String?,
+        @Query("lastItem") lastItem: String?,
+        @Query("uid") uid: String = "",
+        @Query("type") type: String = "feed",
+        @Query("showDefault") showDefault: Int = 1,
+    ): CollectionResponse<List<CloudCollection>>
+
+    @POST("/v6/collection/addItem")
+    @FormUrlEncoded
+    suspend fun updateCollectionItem(@FieldMap data: Map<String, String>): CollectionResponse<JsonElement>
+
+    @POST("/v6/collection/create")
+    @Multipart
+    suspend fun createCollection(@Part parts: List<MultipartBody.Part>): CollectionResponse<JsonElement>
+
+    @POST("/v6/collection/delete")
+    @FormUrlEncoded
+    suspend fun deleteCollection(@Field("id") id: String): CollectionResponse<JsonElement>
+
+    @GET
+    suspend fun getCollectionPage(
+        @Url url: String,
+        @Query("uid") uid: String?,
+        @Query("id") id: String?,
+        @Query("showDefault") showDefault: Int?,
+        @Query("page") page: Int,
+        @Query("lastItem") lastItem: String?,
+    ): HomeFeedResponse
+
+    @GET("/v6/feed/detail")
+    suspend fun getCollectionFeedDetail(@Query("id") id: String): FeedContentResponse
 
     @POST
     fun postDelete(

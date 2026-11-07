@@ -35,27 +35,40 @@ fun FeedReplySortCard(
     replyCount: String,
     selected: Int = 0,
     pinnedTopInset: Dp? = null,
+    isRefreshing: Boolean = false,
     updateSortReply: (Int) -> Unit,
 ) {
     if (isMiuix()) {
         com.example.c001apk.compose.ui.component.design.TabBarSurface(modifier.fillMaxWidth(), estimatedHeight = 100.dp,
             pinnedTopInset = pinnedTopInset) {
-        Column(Modifier.fillMaxWidth().background(com.example.c001apk.compose.ui.component.design.barBackground(MiuixTheme.colorScheme.surface))
-            .padding(horizontal = 12.dp, vertical = 8.dp).testTag("miuix-comment-sort"),
-            verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                top.yukonga.miuix.kmp.basic.Text("评论", Modifier.weight(1f), fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold, color = MiuixTheme.colorScheme.onSurface)
-                top.yukonga.miuix.kmp.basic.Text("共 $replyCount 回复", fontSize = 12.sp,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+            Column(Modifier.fillMaxWidth().background(com.example.c001apk.compose.ui.component.design.barBackground(MiuixTheme.colorScheme.surface))) {
+                Column(Modifier.fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp).testTag("miuix-comment-sort"),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        top.yukonga.miuix.kmp.basic.Text("评论", Modifier.weight(1f), fontSize = 18.sp,
+                            fontWeight = FontWeight.SemiBold, color = MiuixTheme.colorScheme.onSurface)
+                        top.yukonga.miuix.kmp.basic.Text("共 $replyCount 回复", fontSize = 12.sp,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary)
+                    }
+                    val haptic = rememberHapticClick {}
+                    com.example.c001apk.compose.ui.component.design.FilledTabs(
+                        tabs = listOf("默认", "最新", "热门", "楼主"),
+                        selectedTabIndex = selected.coerceIn(0, 3), modifier = Modifier.fillMaxWidth(),
+                        onTabSelected = { if (!isRefreshing) { haptic(); updateSortReply(it) } },
+                    )
+                }
+                // Sorting drives this native indicator; pull gestures belong to the page container.
+                top.yukonga.miuix.kmp.basic.PullToRefresh(
+                    isRefreshing = isRefreshing,
+                    onRefresh = {},
+                    modifier = Modifier.fillMaxWidth().background(MiuixTheme.colorScheme.surface)
+                        .testTag("comment-sort-refresh"),
+                    color = MiuixTheme.colorScheme.primary,
+                    refreshTexts = listOf("下拉刷新", "松开刷新", "正在刷新", "刷新完成"),
+                    refreshTextStyle = MiuixTheme.textStyles.footnote1.copy(color = MiuixTheme.colorScheme.onSurfaceVariantSummary),
+                ) {}
             }
-            val haptic = rememberHapticClick {}
-            com.example.c001apk.compose.ui.component.design.FilledTabs(
-                tabs = listOf("默认", "最新", "热门", "楼主"),
-                selectedTabIndex = selected.coerceIn(0, 3), modifier = Modifier.fillMaxWidth(),
-                onTabSelected = { haptic(); updateSortReply(it) },
-            )
-        }
         }
         return
     }

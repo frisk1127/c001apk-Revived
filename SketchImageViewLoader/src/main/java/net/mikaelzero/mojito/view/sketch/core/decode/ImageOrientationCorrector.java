@@ -24,9 +24,12 @@ import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.Gainmap;
+import android.os.Build;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.exifinterface.media.ExifInterface;
 
 import net.mikaelzero.mojito.view.sketch.core.cache.BitmapPool;
@@ -222,6 +225,10 @@ public class ImageOrientationCorrector {
         Matrix matrix = new Matrix();
         initializeMatrixForExifRotation(exifOrientation, matrix);
 
+        if (Build.VERSION.SDK_INT >= 34 && bitmap.hasGainmap()) {
+            return Api34Impl.rotate(bitmap, matrix);
+        }
+
         // 根据旋转角度计算新的图片的尺寸
         RectF newRect = new RectF(0, 0, bitmap.getWidth(), bitmap.getHeight());
         matrix.mapRect(newRect);
@@ -244,6 +251,37 @@ public class ImageOrientationCorrector {
         canvas.drawBitmap(bitmap, matrix, paint);
 
         return result;
+    }
+
+    @RequiresApi(34)
+    private static class Api34Impl {
+        static Bitmap rotate(Bitmap source, Matrix matrix) {
+            Bitmap result = Bitmap.createBitmap(source, 0, 0, source.getWidth(), source.getHeight(), matrix, true);
+            // Android 15+ transforms gainmaps in createBitmap; Android 14 needs an explicit copy.
+            if (!result.hasGainmap()) {
+                result.setGainmap(rotateGainmap(source.getGainmap(), matrix));
+            }
+            return result;
+        }
+
+        private static Gainmap rotateGainmap(Gainmap source, Matrix matrix) {
+            Bitmap contents = source.getGainmapContents();
+            Gainmap result = new Gainmap(Bitmap.createBitmap(contents, 0, 0,
+                    contents.getWidth(), contents.getHeight(), matrix, true));
+            float[] values = source.getRatioMin();
+            result.setRatioMin(values[0], values[1], values[2]);
+            values = source.getRatioMax();
+            result.setRatioMax(values[0], values[1], values[2]);
+            values = source.getGamma();
+            result.setGamma(values[0], values[1], values[2]);
+            values = source.getEpsilonSdr();
+            result.setEpsilonSdr(values[0], values[1], values[2]);
+            values = source.getEpsilonHdr();
+            result.setEpsilonHdr(values[0], values[1], values[2]);
+            result.setDisplayRatioForFullHdr(source.getDisplayRatioForFullHdr());
+            result.setMinDisplayRatioForHdrTransition(source.getMinDisplayRatioForHdrTransition());
+            return result;
+        }
     }
 
     /**

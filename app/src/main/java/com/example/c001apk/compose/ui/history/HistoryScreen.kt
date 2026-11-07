@@ -53,8 +53,9 @@ import com.example.c001apk.compose.logic.state.LoadingState
 import com.example.c001apk.compose.ui.component.BackButton
 import com.example.c001apk.compose.ui.component.cards.HistoryCard
 import com.example.c001apk.compose.ui.component.cards.LoadingCard
-import com.example.c001apk.compose.ui.component.design.SearchInputBar
-import androidx.compose.ui.focus.FocusRequester
+import com.example.c001apk.compose.ui.component.design.FavoriteSearchHeader
+import com.example.c001apk.compose.ui.theme.isMiuix
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.example.c001apk.compose.util.ReportType
 import com.example.c001apk.compose.util.makeToast
 import java.text.SimpleDateFormat
@@ -65,7 +66,7 @@ import java.util.Locale
  * Created by bggRGjQaUbCoE on 2024/6/17
  */
 
-enum class HistoryType { FAV, CLOUD, HISTORY }
+enum class HistoryType { FAV, HISTORY }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,9 +90,8 @@ fun HistoryScreen(
     val context = LocalContext.current
     var showClearDialog by remember { mutableStateOf(false) }
     var showBackupMenu by remember { mutableStateOf(false) }
-    var searchMode by remember { mutableStateOf(false) }
-    var searchQuery by remember { mutableStateOf("") }
-    val searchFocus = remember { FocusRequester() }
+    var searchMode by rememberSaveable(type) { mutableStateOf(false) }
+    var searchQuery by rememberSaveable(type) { mutableStateOf("") }
     val visibleData = remember(dataList, searchQuery) {
         if (searchQuery.isBlank()) dataList else dataList.filter {
             listOf(it.message, it.uname, it.device).joinToString(" ").contains(searchQuery, ignoreCase = true)
@@ -103,116 +103,96 @@ fun HistoryScreen(
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri -> uri?.let(viewModel::importFavorites) }
-    var exportHtml by remember { mutableStateOf(false) }
-    val documentLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("text/plain")
-    ) { uri -> uri?.let { viewModel.exportFavoritesDocument(it, exportHtml) } }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            if (type in listOf(HistoryType.FAV.name, HistoryType.CLOUD.name) && searchMode) {
-                SearchInputBar(query = searchQuery, onQueryChange = { searchQuery = it },
-                    onSearch = { searchQuery = it }, hint = "搜索本地收藏",
-                    onBack = { searchMode = false; searchQuery = "" }, focusRequester = searchFocus)
-            } else {
-            TopAppBar(
-                windowInsets = WindowInsets.systemBars
-                    .only(WindowInsetsSides.Start + WindowInsetsSides.Top),
-                navigationIcon = {
-                    BackButton { onBackClick() }
-                },
-                title = when (type) {
-                        HistoryType.FAV.name -> "本地收藏"
-                        HistoryType.CLOUD.name -> "云端收藏"
-                        HistoryType.HISTORY.name -> "浏览历史"
-                        else -> type
+            FavoriteSearchHeader(
+                enabled = type == HistoryType.FAV.name,
+                query = searchQuery, onQueryChange = { searchQuery = it },
+                expanded = searchMode, onExpandedChange = { searchMode = it },
+                hint = "搜索本地收藏",
+            ) {
+                TopAppBar(
+                    windowInsets = WindowInsets.systemBars
+                        .only(WindowInsetsSides.Start + WindowInsetsSides.Top),
+                    navigationIcon = {
+                        BackButton { onBackClick() }
                     },
-                actions = {
-                    if (type in listOf(HistoryType.FAV.name, HistoryType.CLOUD.name)) {
-                        IconButton(onClick = { searchMode = true }) {
-                            Icon(Icons.Default.Search, contentDescription = "搜索收藏")
+                    title = when (type) {
+                            HistoryType.FAV.name -> "本地收藏"
+                            HistoryType.HISTORY.name -> "浏览历史"
+                            else -> type
+                        },
+                    actions = {
+                        if (type == HistoryType.FAV.name && !isMiuix()) {
+                            IconButton(onClick = { searchMode = true }) {
+                                Icon(Icons.Default.Search, contentDescription = "搜索收藏")
+                            }
                         }
-                    }
-                    AnimatedVisibility(
-                        visible = dataList.isNotEmpty(),
-                        enter = fadeIn(),
-                        exit = fadeOut()
-                    ) {
-                        IconButton(
-                            enabled = !viewModel.isBackupBusy,
-                            onClick = com.example.c001apk.compose.ui.component.rememberHapticClick { showClearDialog = true }
+                        AnimatedVisibility(
+                            visible = dataList.isNotEmpty(),
+                            enter = fadeIn(),
+                            exit = fadeOut()
                         ) {
-                            Icon(imageVector = Icons.Default.ClearAll, contentDescription = "清空列表")
-                        }
-                    }
-                    if (type in listOf(HistoryType.FAV.name, HistoryType.CLOUD.name)) {
-                        Box {
                             IconButton(
                                 enabled = !viewModel.isBackupBusy,
-                                onClick = com.example.c001apk.compose.ui.component.rememberHapticClick { showBackupMenu = true }
+                                onClick = com.example.c001apk.compose.ui.component.rememberHapticClick { showClearDialog = true }
                             ) {
-                                if (viewModel.isBackupBusy) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(24.dp),
-                                        strokeWidth = 2.dp,
-                                    )
-                                } else {
-                                    Icon(Icons.Default.MoreVert, contentDescription = "收藏备份")
-                                }
+                                Icon(imageVector = Icons.Default.ClearAll, contentDescription = "清空列表")
                             }
-                            DropdownMenu(
-                                expanded = showBackupMenu,
-                                onDismissRequest = { showBackupMenu = false },
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("导入收藏") },
-                                    enabled = type == HistoryType.FAV.name,
-                                    leadingIcon = { Icon(Icons.Default.Download, contentDescription = null) },
-                                    onClick = com.example.c001apk.compose.ui.component.rememberHapticClick {
-                                        showBackupMenu = false
-                                        try {
-                                            importLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
-                                        } catch (e: Exception) {
-                                            context.makeToast("无法打开文件选择器")
-                                        }
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("导出收藏") },
-                                    leadingIcon = { Icon(Icons.Default.Upload, contentDescription = null) },
-                                    enabled = type == HistoryType.FAV.name && dataList.isNotEmpty(),
-                                    onClick = com.example.c001apk.compose.ui.component.rememberHapticClick {
-                                        showBackupMenu = false
-                                        val date = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.ROOT).format(Date())
-                                        try {
-                                            exportLauncher.launch("c001apk_favorites_$date.json")
-                                        } catch (e: Exception) {
-                                            context.makeToast("无法打开文件选择器")
-                                        }
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("导出 Markdown") },
-                                    enabled = dataList.isNotEmpty(),
-                                    onClick = com.example.c001apk.compose.ui.component.rememberHapticClick {
-                                        showBackupMenu = false; exportHtml = false
-                                        documentLauncher.launch("c001apk_favorites.md")
-                                    },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("导出 HTML") },
-                                    enabled = dataList.isNotEmpty(),
-                                    onClick = com.example.c001apk.compose.ui.component.rememberHapticClick {
-                                        showBackupMenu = false; exportHtml = true
-                                        documentLauncher.launch("c001apk_favorites.html")
-                                    },
-                                )
+                        }
+                        if (type == HistoryType.FAV.name) {
+                            Box {
+                                IconButton(
+                                    enabled = !viewModel.isBackupBusy,
+                                    onClick = com.example.c001apk.compose.ui.component.rememberHapticClick { showBackupMenu = true }
+                                ) {
+                                    if (viewModel.isBackupBusy) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(24.dp),
+                                            strokeWidth = 2.dp,
+                                        )
+                                    } else {
+                                        Icon(Icons.Default.MoreVert, contentDescription = "收藏备份")
+                                    }
+                                }
+                                DropdownMenu(
+                                    expanded = showBackupMenu,
+                                    onDismissRequest = { showBackupMenu = false },
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("导入收藏") },
+                                        enabled = type == HistoryType.FAV.name,
+                                        leadingIcon = { Icon(Icons.Default.Download, contentDescription = null) },
+                                        onClick = com.example.c001apk.compose.ui.component.rememberHapticClick {
+                                            showBackupMenu = false
+                                            try {
+                                                importLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream"))
+                                            } catch (e: Exception) {
+                                                context.makeToast("无法打开文件选择器")
+                                            }
+                                        },
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("导出收藏") },
+                                        leadingIcon = { Icon(Icons.Default.Upload, contentDescription = null) },
+                                        enabled = type == HistoryType.FAV.name && dataList.isNotEmpty(),
+                                        onClick = com.example.c001apk.compose.ui.component.rememberHapticClick {
+                                            showBackupMenu = false
+                                            val date = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.ROOT).format(Date())
+                                            try {
+                                                exportLauncher.launch("c001apk_favorites_$date.json")
+                                            } catch (e: Exception) {
+                                                context.makeToast("无法打开文件选择器")
+                                            }
+                                        },
+                                    )
+                                }
                             }
                         }
                     }
-                }
-            )
+                )
             }
         },
     ) { paddingValues ->

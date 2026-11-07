@@ -69,6 +69,7 @@ fun LazyListScope.ItemCard(
     onShowProductConfigComparison: (() -> Unit)? = null,
     onShowGlobalProductComparison: (() -> Unit)? = null,
     onToggleProductEntityComparison: ((HomeFeedResponse.Entities) -> Unit)? = null,
+    onDeleteCollection: ((HomeFeedResponse.Data) -> Unit)? = null,
 ) {
 
     when (loadingState) {
@@ -257,6 +258,7 @@ fun LazyListScope.ItemCard(
                         modifier = Modifier.padding(horizontal = 10.dp),
                         data = item,
                         onViewFFFList = onViewFFFList,
+                        onDeleteCollection = onDeleteCollection,
                     )
 
                 }

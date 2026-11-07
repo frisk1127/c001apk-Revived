@@ -14,7 +14,6 @@ import com.example.c001apk.compose.logic.repository.BlackListRepo
 import com.example.c001apk.compose.logic.repository.HistoryFavoriteRepo
 import com.example.c001apk.compose.logic.backup.FavoriteBackup
 import com.example.c001apk.compose.logic.backup.InvalidFavoriteBackupException
-import com.example.c001apk.compose.logic.backup.FavoriteDocumentExport
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -24,8 +23,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import java.io.IOException
 
 /**
@@ -45,50 +42,16 @@ class HistoryViewModel @AssistedInject constructor(
         fun create(type: HistoryType): HistoryViewModel
     }
 
-    private val cloudData = MutableStateFlow<List<com.example.c001apk.compose.logic.model.FeedEntity>>(emptyList())
     val dataList = when (type) {
         HistoryType.FAV -> historyFavoriteRepo.loadAllFavoriteListFlow()
         HistoryType.HISTORY -> historyFavoriteRepo.loadAllHistoryListFlow()
-        HistoryType.CLOUD -> cloudData.asStateFlow()
-    }
-
-    init {
-        if (type == HistoryType.CLOUD) loadCloudFavorites()
-    }
-
-    private fun loadCloudFavorites() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val all = mutableListOf<com.example.c001apk.compose.logic.model.FeedEntity>()
-            var page = 1
-            var lastItem: String? = null
-            while (page <= 100) {
-                val state = networkRepo.getFavoriteList(page, null, lastItem).first {
-                    it !is com.example.c001apk.compose.logic.state.LoadingState.Loading
-                }
-                val response = (state as? com.example.c001apk.compose.logic.state.LoadingState.Success)?.response.orEmpty()
-                if (response.isEmpty()) break
-                all += response.mapNotNull { item ->
-                    val id = item.id ?: return@mapNotNull null
-                    com.example.c001apk.compose.logic.model.FeedEntity(
-                        id = id, uid = item.uid.orEmpty(), uname = item.username.orEmpty(),
-                        avatar = item.userAvatar.orEmpty(), device = item.deviceTitle.orEmpty(),
-                        message = item.message.orEmpty(), pubDate = item.dateline.toString(),
-                        mediaJson = com.example.c001apk.compose.logic.model.FeedMediaJson.encode(item),
-                    )
-                }
-                lastItem = response.lastOrNull()?.id
-                if (response.size < 20 || lastItem.isNullOrBlank()) break
-                page++
-            }
-            cloudData.value = all.distinctBy { it.id }
-        }
     }
 
     private val mediaRequests = mutableSetOf<String>()
     private val mediaSlots = Semaphore(2)
 
     suspend fun loadMedia(id: String) {
-        if (type !in listOf(HistoryType.FAV, HistoryType.CLOUD) || !mediaRequests.add(id)) return
+        if (type != HistoryType.FAV || !mediaRequests.add(id)) return
         try {
             mediaSlots.withPermit {
                 withContext(Dispatchers.IO) {
@@ -130,19 +93,8 @@ class HistoryViewModel @AssistedInject constructor(
         "已导入 $imported 条收藏，跳过 ${favorites.size - imported} 条重复记录"
     }
 
-    fun exportFavoritesDocument(uri: Uri, html: Boolean) = runBackup("导出", allowCloud = true) {
-        val favorites = if (type == HistoryType.CLOUD) cloudData.value else historyFavoriteRepo.loadAllFavorites()
-        val output = context.contentResolver.openOutputStream(uri, "wt")
-            ?: throw IOException("Cannot open export output")
-        output.bufferedWriter(Charsets.UTF_8).use {
-            if (html) FavoriteDocumentExport.writeHtml(favorites, it)
-            else FavoriteDocumentExport.writeMarkdown(favorites, it)
-        }
-        "已导出 ${favorites.size} 条收藏"
-    }
-
-    private fun runBackup(action: String, allowCloud: Boolean = false, operation: suspend () -> String) {
-        if ((type != HistoryType.FAV && !(allowCloud && type == HistoryType.CLOUD)) || isBackupBusy) return
+    private fun runBackup(action: String, operation: suspend () -> String) {
+        if (type != HistoryType.FAV || isBackupBusy) return
         isBackupBusy = true
         viewModelScope.launch {
             try {
@@ -171,7 +123,6 @@ class HistoryViewModel @AssistedInject constructor(
             when (type) {
                 HistoryType.FAV -> historyFavoriteRepo.deleteFavByUid(uid)
                 HistoryType.HISTORY -> historyFavoriteRepo.deleteHistoryByUid(uid)
-                HistoryType.CLOUD -> cloudData.value = cloudData.value.filterNot { it.uid == uid }
             }
             toastText = "已拉黑并移除相关记录"
         }
@@ -182,9 +133,6 @@ class HistoryViewModel @AssistedInject constructor(
             when (type) {
                 HistoryType.FAV -> historyFavoriteRepo.deleteFavorite(id)
                 HistoryType.HISTORY -> historyFavoriteRepo.deleteHistory(id)
-                HistoryType.CLOUD -> networkRepo.unfavoriteFeed(id).collect {
-                    if (it.isSuccess) cloudData.value = cloudData.value.filterNot { item -> item.id == id }
-                }
             }
             toastText = "删除成功"
         }
@@ -195,7 +143,6 @@ class HistoryViewModel @AssistedInject constructor(
             when (type) {
                 HistoryType.FAV -> historyFavoriteRepo.deleteAllFavorite()
                 HistoryType.HISTORY -> historyFavoriteRepo.deleteAllHistory()
-                HistoryType.CLOUD -> toastText = "云端收藏请逐条取消，避免误操作"
             }
             toastText = "清除成功"
         }

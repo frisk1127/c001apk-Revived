@@ -23,7 +23,7 @@ object FavoriteDocumentExport {
     fun writeHtml(favorites: List<FeedEntity>, writer: Writer) {
         fun escape(value: String) = value.replace("&", "&amp;").replace("<", "&lt;")
             .replace(">", "&gt;").replace("\"", "&quot;")
-        writer.append("<!doctype html><meta charset=\"utf-8\"><title>酷安收藏导出</title>")
+        writer.append("<!doctype html><meta charset=\"utf-8\"><title>酷安动态导出</title>")
             .append("<style>body{max-width:900px;margin:auto;padding:24px;font:16px/1.7 system-ui;background:#f5f6f8}article{background:white;border-radius:14px;padding:20px;margin:16px 0;white-space:pre-wrap}small{color:#68707b}</style>")
         favorites.forEachIndexed { index, item ->
             val images = FeedMediaJson.decode(item.mediaJson)?.images.orEmpty()

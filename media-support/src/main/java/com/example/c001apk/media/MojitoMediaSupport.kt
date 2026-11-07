@@ -70,7 +70,7 @@ class MojitoMediaImageFactory(
                 .setBitmapConfig(Bitmap.Config.ARGB_8888)
                 .setBitmapPoolDisabled(true)
                 .setCacheProcessedImageInDisk(false)
-                .setCorrectImageOrientationDisabled(true)
+                .setCorrectImageOrientationDisabled(false)
         }
 
         delegate.loadSillContent(view, uri)

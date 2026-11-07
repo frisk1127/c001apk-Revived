@@ -66,8 +66,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.c001apk.compose.R
 import com.example.c001apk.compose.constant.Constants.EMPTY_STRING
 import com.example.c001apk.compose.logic.model.HomeFeedResponse
-import com.example.c001apk.compose.logic.model.FeedEntity
-import com.example.c001apk.compose.logic.backup.FavoriteDocumentExport
 import com.example.c001apk.compose.logic.providable.LocalDragHandoffToParent
 import com.example.c001apk.compose.logic.state.LoadingState
 import com.example.c001apk.compose.ui.base.LikeType
@@ -82,6 +80,8 @@ import com.example.c001apk.compose.ui.component.cards.buildReplyAvatarMap
 import com.example.c001apk.compose.ui.component.cards.FeedReplySortCard
 import com.example.c001apk.compose.ui.component.cards.LoadingCard
 import com.example.c001apk.compose.ui.component.rememberHapticClick
+import com.example.c001apk.compose.ui.collection.FeedCollectionViewModel
+import com.example.c001apk.compose.ui.collection.FeedCollectionSheet
 import com.example.c001apk.compose.ui.feed.reply.ReplyActivity
 import com.example.c001apk.compose.util.CookieUtil.isLogin
 import com.example.c001apk.compose.util.ReportType
@@ -102,9 +102,6 @@ import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import kotlinx.coroutines.flow.first
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
  * Created by bggRGjQaUbCoE on 2024/6/4
@@ -142,20 +139,29 @@ fun FeedScreen(
         (if (!feedData?.messageCover.isNullOrEmpty()) 1 else 0) +
         (if (!feedData?.title.isNullOrEmpty()) 1 else 0)
     var dropdownMenuExpanded by remember { mutableStateOf(false) }
-    var exportHtml by remember { mutableStateOf(false) }
-    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
-        uri ?: return@rememberLauncherForActivityResult
-        val response = (viewModel.feedState as? LoadingState.Success)?.response ?: return@rememberLauncherForActivityResult
-        runCatching {
-            val item = FeedEntity(response.id.orEmpty(), response.uid.orEmpty(), response.username.orEmpty(),
-                response.userAvatar.orEmpty(), response.deviceTitle.orEmpty(), response.message.orEmpty(),
-                response.dateline.toString(), mediaJson = com.example.c001apk.compose.logic.model.FeedMediaJson.encode(response))
-            context.contentResolver.openOutputStream(uri)?.bufferedWriter(Charsets.UTF_8)?.use {
-                if (exportHtml) FavoriteDocumentExport.writeHtml(listOf(item), it)
-                else FavoriteDocumentExport.writeMarkdown(listOf(item), it)
-            }
-            context.makeToast("文章已导出")
-        }.onFailure { context.makeToast("导出失败，请重试") }
+    val collectionViewModel = hiltViewModel<FeedCollectionViewModel, FeedCollectionViewModel.Factory>(key = "collection:$id") {
+        it.create(id)
+    }
+    var showCollectionSheet by rememberSaveable(id) { mutableStateOf(false) }
+    LaunchedEffect(collectionViewModel, collectionViewModel.state.saved) {
+        if (collectionViewModel.state.saved) {
+            viewModel.isCloudFav = collectionViewModel.state.selectedIds.isNotEmpty()
+            showCollectionSheet = false
+            collectionViewModel.consumeSaved()
+            context.makeToast("云端收藏已更新")
+        }
+    }
+    FeedCollectionSheet(
+        show = showCollectionSheet,
+        state = collectionViewModel.state,
+        onDismiss = { showCollectionSheet = false },
+        onRetry = collectionViewModel::load,
+        onToggle = collectionViewModel::toggle,
+        onSave = collectionViewModel::save,
+        onCreate = collectionViewModel::createAndSave,
+    )
+    LaunchedEffect(collectionViewModel, showCollectionSheet) {
+        if (showCollectionSheet && !collectionViewModel.state.loaded) collectionViewModel.load()
     }
 
     val scope = rememberCoroutineScope()
@@ -163,6 +169,11 @@ fun FeedScreen(
     var openBottomSheet by remember { mutableStateOf(false) }
     var viewReply by remember { mutableStateOf(false) }
     var selected by rememberSaveable { mutableIntStateOf(0) }
+    var refreshingSort by rememberSaveable(id) { mutableStateOf(false) }
+    val showSortRefresh = miuix && refreshingSort && viewModel.isRefreshing
+    LaunchedEffect(viewModel.isRefreshing, refreshingSort) {
+        if (!viewModel.isRefreshing) refreshingSort = false
+    }
     val shouldShowSortCard by remember(commentStartIndex) {
         derivedStateOf { lazyListState.firstVisibleItemIndex >= commentStartIndex }
     }
@@ -229,10 +240,14 @@ fun FeedScreen(
             replyCount = viewModel.replyCount,
             selected = selected,
             pinnedTopInset = if (blur) topInset else null,
+            isRefreshing = showSortRefresh,
             updateSortReply = { index ->
-                setReplyType(index)
-                if (shouldShowSortCard) viewModel.isViewReply = true
-                viewModel.refresh()
+                if (!viewModel.isRefreshing && !viewModel.isLoadMore) {
+                    setReplyType(index)
+                    refreshingSort = miuix
+                    if (shouldShowSortCard) viewModel.isViewReply = true
+                    viewModel.refresh()
+                }
             },
         )
         if (!miuix) HorizontalDivider()
@@ -292,6 +307,7 @@ fun FeedScreen(
                 },
                 actions = {
                     if (viewModel.feedState is LoadingState.Success) {
+                        FeedExportButton((viewModel.feedState as LoadingState.Success).response)
                         Box(Modifier.wrapContentSize(Alignment.TopEnd)) {
                             MoreMenuButton { dropdownMenuExpanded = true }
                             DropdownMenu(
@@ -317,26 +333,19 @@ fun FeedScreen(
                                         )
                                     }
                                 DropdownMenuItem(
-                                    text = { Text(if (viewModel.isFav) "取消收藏" else "收藏") },
+                                    text = { Text(if (viewModel.isFav) "取消本地收藏" else "本地收藏") },
                                     onClick = {
                                         dropdownMenuExpanded = false
                                         viewModel.onFav()
                                     }
                                 )
-                                DropdownMenuItem(text = { Text("导出 Markdown") }, onClick = {
-                                    dropdownMenuExpanded = false; exportHtml = false
-                                    exportLauncher.launch("c001apk_${id}.md")
-                                })
-                                DropdownMenuItem(text = { Text("导出 HTML") }, onClick = {
-                                    dropdownMenuExpanded = false; exportHtml = true
-                                    exportLauncher.launch("c001apk_${id}.html")
-                                })
                                 DropdownMenuItem(
-                                    text = { Text(if (viewModel.isCloudFav) "取消云端收藏" else "收藏到云端") },
+                                    text = { Text(if (viewModel.isCloudFav) "管理云端收藏" else "收藏到云端") },
                                     enabled = isLogin,
                                     onClick = {
                                         dropdownMenuExpanded = false
-                                        viewModel.onCloudFav()
+                                        collectionViewModel.load()
+                                        showCollectionSheet = true
                                     }
                                 )
                                 DropdownMenuItem(
@@ -419,10 +428,13 @@ fun FeedScreen(
                 end = paddingValues.calculateEndPadding(layoutDirection),
                 start = paddingValues.calculateStartPadding(layoutDirection)
             ),
-            isRefreshing = viewModel.isRefreshing,
+            isRefreshing = viewModel.isRefreshing && !showSortRefresh,
             onRefresh = {
-                viewModel.isPull = true
-                viewModel.refresh()
+                if (!viewModel.isRefreshing && !viewModel.isLoadMore) {
+                    refreshingSort = false
+                    viewModel.isPull = true
+                    viewModel.refresh()
+                }
             },
 
         ) {

@@ -116,6 +116,11 @@ public class LruBitmapPool implements BitmapPool {
             return false;
         }
 
+        // Gainmap metadata belongs to its image and cannot be reused as a plain decode buffer.
+        if (Build.VERSION.SDK_INT >= 34 && bitmap.hasGainmap()) {
+            return false;
+        }
+
         final int size = strategy.getSize(bitmap);
         strategy.put(bitmap);
         tracker.add(bitmap);

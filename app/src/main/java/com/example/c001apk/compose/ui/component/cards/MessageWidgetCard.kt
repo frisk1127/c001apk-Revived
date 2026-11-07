@@ -63,7 +63,7 @@ fun MessageWidgetCard(
         FFFCardRow(
             dataList = listOf(
                 FFFCardItem(
-                    title = "我的收藏",
+                    title = "云端收藏",
                     value = null,
                     imageVector = Icons.Outlined.StarOutline,
                     FFFListType.COLLECTION.name
